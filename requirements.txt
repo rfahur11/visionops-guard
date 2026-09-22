@@ -21,7 +21,7 @@ evidently>=0.4.15
 # API Serving & Monitoring
 fastapi>=0.110.0
 uvicorn[standard]>=0.28.0
-python-multipart>=0.0.9
+python-multipart<=0.0.12
 pydantic>=2.6.0
 prometheus-fastapi-instrumentator>=6.1.0
 prometheus-client>=0.20.0
