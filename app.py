@@ -57,8 +57,17 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, la
     """
     is_en = "EN" in str(lang_choice)
     if input_image is None:
-        msg = "⚠️ No image provided. Please upload an image or click the camera icon to snap a photo." if is_en else "⚠️ Belum ada foto yang dipilih. Silakan upload gambar atau klik tombol kamera untuk menjepret foto."
-        return None, msg
+        empty_res = {
+            "status": "AWAITING INPUT ℹ️" if is_en else "MENUNGGU INPUT ℹ️",
+            ("safety_assessment" if is_en else "evaluasi_k3"): (
+                "No image provided. Please snap a webcam photo or upload an image."
+                if is_en else
+                "Belum ada gambar yang dipilih. Silakan ambil foto webcam atau unggah gambar."
+            ),
+            "inference_latency_ms": 0.0,
+            ("detections_count" if is_en else "total_deteksi"): 0
+        }
+        return None, json.dumps(empty_res, indent=2, ensure_ascii=False)
 
     prep_msg = "📸 Preparing and decoding image frame..." if is_en else "📸 Mempersiapkan frame gambar..."
     progress(0.15, desc=prep_msg)
@@ -84,31 +93,49 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, la
     ann_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     ann_rgb = cv2.cvtColor(ann_bgr, cv2.COLOR_BGR2RGB)
 
-    # Format summary dictionary with clean Unicode & K3 details
-    status_text = result.get("compliance_status", "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED")
+    status_text = result.get("compliance_status", "COMPLIANT" if is_en else "PATUH STANDAR K3")
     if result["is_compliant"]:
         status_display = f"{status_text} ✅"
-    elif status_text.startswith("NO"):
+    elif "NO" in status_text or "TIDAK" in status_text:
         status_display = f"{status_text} ℹ️"
     else:
         status_display = f"{status_text} ⚠️"
 
-    summary = {
-        "status": status_display,
-        ("safety_assessment" if is_en else "k3_assessment"): result.get("assessment", ""),
-        "violations_count": result["violations_count"],
-        "violation_details": result.get("violation_details", []),
-        "inference_latency_ms": round(result["latency_ms"], 2),
-        "detections_count": len(result["detections"]),
-        "detected_objects": [
-            {
-                "class": d["class_name"].upper(),
-                "confidence": f"{d['confidence']*100:.1f}%",
-                "box_xyxy": d["box_xyxy"]
-            }
-            for d in result["detections"]
-        ]
-    }
+    if is_en:
+        summary = {
+            "status": status_display,
+            "safety_assessment": result.get("assessment", ""),
+            "violations_count": result["violations_count"],
+            "violation_details": result.get("violation_details", []),
+            "inference_latency_ms": round(result["latency_ms"], 2),
+            "detections_count": len(result["detections"]),
+            "detected_objects": [
+                {
+                    "class": d["class_name"].upper(),
+                    "description": d.get("class_display", d["class_name"].upper()),
+                    "confidence": f"{d['confidence']*100:.1f}%",
+                    "box_xyxy": d["box_xyxy"]
+                }
+                for d in result["detections"]
+            ]
+        }
+    else:
+        summary = {
+            "status": status_display,
+            "evaluasi_k3": result.get("assessment", ""),
+            "jumlah_pelanggaran": result["violations_count"],
+            "rincian_pelanggaran": result.get("violation_details", []),
+            "latensi_inferensi_ms": round(result["latency_ms"], 2),
+            "total_deteksi": len(result["detections"]),
+            "objek_terdeteksi": [
+                {
+                    "kelas": d.get("class_display", d["class_name"].upper()),
+                    "tingkat_keyakinan": f"{d['confidence']*100:.1f}%",
+                    "koordinat_kotak": d["box_xyxy"]
+                }
+                for d in result["detections"]
+            ]
+        }
 
     done_msg = "✅ Inspection Completed!" if is_en else "✅ Analisis Selesai!"
     progress(1.0, desc=done_msg)
@@ -116,12 +143,99 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, la
     return ann_rgb, formatted_json_str
 
 
+def switch_language(lang_choice, webcam_image, upload_image, conf_threshold):
+    """
+    Dynamically updates all UI text elements when the user toggles language.
+    If an image is currently loaded, it immediately re-evaluates the output.
+    """
+    is_en = "EN" in str(lang_choice)
+    desc_val = (
+        "Industrial Safety PPE visual inspection and compliance monitoring system powered by ONNX Runtime."
+        if is_en else
+        "Sistem deteksi visual Alat Pelindung Diri (APD/PPE) dan kepatuhan K3 industri berbasis ONNX Runtime."
+    )
+    cam_hint_val = (
+        "💡 *Position yourself in front of the camera, click the camera icon **[📷]** on the video to snap a photo, then click inspect:* "
+        if is_en else
+        "💡 *Posisikan diri Anda di depan kamera, klik icon kamera **[📷]** di tengah video untuk snap foto, lalu klik tombol periksa:*"
+    )
+    webcam_btn_val = "⚡ Inspect Safety Compliance" if is_en else "⚡ Periksa Kepatuhan K3"
+    upload_btn_val = "⚡ Inspect Safety Compliance" if is_en else "⚡ Periksa Kepatuhan K3"
+    slider_label_val = (
+        "Confidence Threshold (Recommended: 0.15 - 0.25)"
+        if is_en else
+        "Ambang Batas Kepercayaan (Rekomendasi: 0.15 - 0.25)"
+    )
+    webcam_label_val = "Live Webcam Stream" if is_en else "Tangkapan Kamera Langsung (Webcam)"
+    upload_label_val = "Upload Inspection Image (JPG / PNG)" if is_en else "Unggah Gambar Inspeksi (JPG / PNG)"
+    out_img_label_val = "ONNX Detection Visualization" if is_en else "Hasil Deteksi Visual ONNX"
+    out_details_label_val = "Safety Compliance Analytics & Bounding Boxes" if is_en else "Analisis Kepatuhan K3 & Bounding Box"
+    tab_cam_val = "📸 Live Camera (Webcam)" if is_en else "📸 Kamera Langsung (Webcam)"
+    tab_up_val = "📁 Upload Image File" if is_en else "📁 Unggah File Gambar"
+
+    active_img = webcam_image if webcam_image is not None else upload_image
+    if active_img is not None:
+        ann_rgb, json_str = inspect_safety_ppe(active_img, conf_threshold, lang_choice)
+        return (
+            gr.update(value=desc_val),
+            gr.update(value=cam_hint_val),
+            gr.update(value=webcam_btn_val),
+            gr.update(value=upload_btn_val),
+            gr.update(label=slider_label_val),
+            gr.update(label=webcam_label_val),
+            gr.update(label=upload_label_val),
+            gr.update(label=tab_cam_val),
+            gr.update(label=tab_up_val),
+            gr.update(label=out_img_label_val, value=ann_rgb),
+            gr.update(label=out_details_label_val, value=json_str)
+        )
+    else:
+        init_msg = (
+            json.dumps({
+                "status": "AWAITING INPUT ℹ️",
+                "safety_assessment": "Please snap a webcam photo or upload an image to start inspection.",
+                "violations_count": 0,
+                "inference_latency_ms": 0.0,
+                "detections_count": 0
+            }, indent=2)
+            if is_en else
+            json.dumps({
+                "status": "MENUNGGU INPUT ℹ️",
+                "evaluasi_k3": "Silakan ambil foto webcam atau unggah gambar untuk memulai inspeksi K3.",
+                "jumlah_pelanggaran": 0,
+                "latensi_inferensi_ms": 0.0,
+                "total_deteksi": 0
+            }, indent=2, ensure_ascii=False)
+        )
+        return (
+            gr.update(value=desc_val),
+            gr.update(value=cam_hint_val),
+            gr.update(value=webcam_btn_val),
+            gr.update(value=upload_btn_val),
+            gr.update(label=slider_label_val),
+            gr.update(label=webcam_label_val),
+            gr.update(label=upload_label_val),
+            gr.update(label=tab_cam_val),
+            gr.update(label=tab_up_val),
+            gr.update(label=out_img_label_val),
+            gr.update(label=out_details_label_val, value=init_msg)
+        )
+
+
+# Initial Indonesian placeholder string
+initial_details_placeholder = json.dumps({
+    "status": "MENUNGGU INPUT ℹ️",
+    "evaluasi_k3": "Silakan ambil foto webcam atau unggah gambar untuk memulai inspeksi K3.",
+    "jumlah_pelanggaran": 0,
+    "latensi_inferensi_ms": 0.0,
+    "total_deteksi": 0
+}, indent=2, ensure_ascii=False)
+
 # Create Gradio Blocks Interface
 with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ VisionOps Guard — Real-Time Safety PPE Inspection")
-    gr.Markdown(
-        "Sistem deteksi visual Alat Pelindung Diri (APD/PPE) dan K3 industri berbasis ONNX Runtime. "
-        "Supports Real-Time Industrial PPE Inspection & Multi-Language Display."
+    desc_md = gr.Markdown(
+        "Sistem deteksi visual Alat Pelindung Diri (APD/PPE) dan kepatuhan K3 industri berbasis ONNX Runtime."
     )
 
     with gr.Row():
@@ -135,34 +249,58 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
     with gr.Row():
         with gr.Column(scale=1):
             with gr.Tabs():
-                with gr.TabItem("📸 Kamera Langsung / Live Webcam"):
+                with gr.TabItem("📸 Kamera Langsung (Webcam)") as tab_cam:
                     webcam_img = gr.Image(
                         sources=["webcam"],
                         type="numpy",
-                        label="Live Webcam Stream"
+                        label="Tangkapan Kamera Langsung (Webcam)"
                     )
-                    gr.Markdown("💡 *Posisikan diri Anda, klik icon kamera **[📷]** di tengah bawah video untuk snap foto, lalu klik tombol periksa:*")
-                    webcam_btn = gr.Button("⚡ Periksa Kepatuhan / Inspect Safety", variant="primary")
+                    cam_hint = gr.Markdown("💡 *Posisikan diri Anda di depan kamera, klik icon kamera **[📷]** di tengah video untuk snap foto, lalu klik tombol periksa:*")
+                    webcam_btn = gr.Button("⚡ Periksa Kepatuhan K3", variant="primary")
 
-                with gr.TabItem("📁 Upload File Gambar / Upload Image"):
+                with gr.TabItem("📁 Unggah File Gambar") as tab_up:
                     upload_img = gr.Image(
                         sources=["upload"],
                         type="numpy",
-                        label="Pilih atau Drag-and-Drop Gambar Proyek"
+                        label="Unggah Gambar Inspeksi (JPG / PNG)"
                     )
-                    upload_btn = gr.Button("⚡ Periksa Kepatuhan / Inspect Safety", variant="primary")
+                    upload_btn = gr.Button("⚡ Periksa Kepatuhan K3", variant="primary")
 
             conf_slider = gr.Slider(
                 minimum=0.05,
                 maximum=1.0,
                 value=0.20,
                 step=0.05,
-                label="Confidence Threshold (Rekomendasi / Recommended: 0.15 - 0.25)"
+                label="Ambang Batas Kepercayaan (Rekomendasi: 0.15 - 0.25)"
             )
         
         with gr.Column(scale=1):
-            output_img = gr.Image(type="numpy", label="ONNX Detection Result")
-            output_details = gr.Textbox(label="Compliance Analytics & Bounding Boxes", lines=14)
+            output_img = gr.Image(type="numpy", label="Hasil Deteksi Visual ONNX")
+            output_details = gr.Textbox(
+                label="Analisis Kepatuhan K3 & Bounding Box",
+                value=initial_details_placeholder,
+                lines=14
+            )
+
+    # Event Handlers for Language Switching
+    lang_radio.change(
+        fn=switch_language,
+        inputs=[lang_radio, webcam_img, upload_img, conf_slider],
+        outputs=[
+            desc_md,
+            cam_hint,
+            webcam_btn,
+            upload_btn,
+            conf_slider,
+            webcam_img,
+            upload_img,
+            tab_cam,
+            tab_up,
+            output_img,
+            output_details
+        ],
+        api_name=False
+    )
 
     # Event Handlers for Webcam
     webcam_btn.click(
@@ -205,7 +343,7 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
         gr.Examples(
             examples=existing_samples,
             inputs=[upload_img, conf_slider],
-            label="📁 Klik Contoh Gambar Proyek Lapangan (Pre-loaded Test Images)"
+            label="📁 Contoh Gambar Proyek Lapangan (Pre-loaded Test Images)"
         )
 
 

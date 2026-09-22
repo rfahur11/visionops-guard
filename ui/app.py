@@ -90,7 +90,7 @@ def main():
         if uploaded_file is not None:
             image_bytes = uploaded_file.read()
     elif input_mode in ["Live Camera (Webcam)", "Kamera Langsung (Webcam)"]:
-        camera_file = st.camera_input("Take Live Photo / Ambil Foto Langsung:")
+        camera_file = st.camera_input("Take Live Camera Photo:" if is_en else "Ambil Foto dari Kamera Langsung:")
         if camera_file is not None:
             image_bytes = camera_file.read()
     else:
@@ -145,9 +145,9 @@ def main():
         # Status Banner
         compliance_status = result.get("compliance_status", "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED")
         if result["is_compliant"]:
-            st.markdown(f'<div class="compliant-banner">✅ {compliance_status} — {result.get("assessment", "Standar K3 Terpenuhi")}</div>', unsafe_allow_html=True)
-        elif compliance_status.startswith("NO"):
-            st.info(f"ℹ️ {compliance_status}: {result.get('assessment', 'Tidak ada pekerja atau APD terdeteksi.')}")
+            st.markdown(f'<div class="compliant-banner">✅ {compliance_status} — {result.get("assessment", "Safety Standards Met" if is_en else "Standar K3 Terpenuhi")}</div>', unsafe_allow_html=True)
+        elif "NO" in compliance_status or "TIDAK" in compliance_status:
+            st.info(f"ℹ️ {compliance_status}: {result.get('assessment', 'No worker or PPE detected.' if is_en else 'Tidak ada pekerja atau APD terdeteksi.')}")
         else:
             st.markdown(f'<div class="violation-banner">⚠️ {compliance_status} — {result.get("assessment", f"{result[\"violations_count\"]} Non-Compliance Alert(s)")}</div>', unsafe_allow_html=True)
 
@@ -158,7 +158,12 @@ def main():
         m1.metric("Inference Latency" if is_en else "Latensi Inferensi", f"{result['latency_ms']} ms", delta="-42% vs PyTorch")
         m2.metric("Total Detections" if is_en else "Total Deteksi", len(result["detections"]))
         m3.metric("Violations Count" if is_en else "Jumlah Pelanggaran", result["violations_count"])
-        m4.metric("Compliance Status" if is_en else "Status Kepatuhan", "COMPLIANT" if result["is_compliant"] else "VIOLATION")
+        
+        if is_en:
+            status_metric = "COMPLIANT" if result["is_compliant"] else ("NO PPE" if "NO" in compliance_status else "VIOLATION")
+        else:
+            status_metric = "PATUH K3" if result["is_compliant"] else ("TIDAK TERDETEKSI" if "TIDAK" in compliance_status else "PELANGGARAN")
+        m4.metric("Compliance Status" if is_en else "Status Kepatuhan", status_metric)
 
         # Detailed Detections Table
         st.markdown("### 📋 " + ("Detected Objects Breakdown" if is_en else "Rincian Objek Terdeteksi"))
@@ -166,8 +171,8 @@ def main():
             det_data = []
             for d in result["detections"]:
                 det_data.append({
-                    "Class / Kelas": d["class_name"].upper(),
-                    "Confidence / Keyakinan": f"{d['confidence'] * 100:.1f}%",
+                    "Class" if is_en else "Kelas": d.get("class_display", d["class_name"].upper()),
+                    "Confidence" if is_en else "Tingkat Keyakinan": f"{d['confidence'] * 100:.1f}%",
                     "Bounding Box (XYWH)": str(d["box_xywh"])
                 })
             st.dataframe(det_data, use_container_width=True)

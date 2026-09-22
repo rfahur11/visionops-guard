@@ -204,9 +204,32 @@ class SafetyPPEPredictor:
         no_hardhats = [d for d in detections if d["class_name"] == "no_hardhat"]
         no_vests = [d for d in detections if d["class_name"] == "no_vest"]
 
+        # Bilingual display names for detected classes
+        class_display_map_id = {
+            "hardhat": "Helm Proyek (Hardhat)",
+            "no_hardhat": "Tanpa Helm (No Hardhat)",
+            "vest": "Rompi Safety (Vest)",
+            "no_vest": "Tanpa Rompi (No Vest)",
+            "person": "Pekerja (Person)"
+        }
+        class_display_map_en = {
+            "hardhat": "Safety Hardhat",
+            "no_hardhat": "No Hardhat (Violation)",
+            "vest": "Safety Vest",
+            "no_vest": "No Vest (Violation)",
+            "person": "Worker / Person"
+        }
+
+        for d in detections:
+            d["class_display"] = (
+                class_display_map_en.get(d["class_name"], d["class_name"].upper())
+                if is_en else
+                class_display_map_id.get(d["class_name"], d["class_name"].upper())
+            )
+
         violation_details = []
         if len(detections) == 0:
-            compliance_status = "NO PERSON / PPE DETECTED"
+            compliance_status = "NO PERSON / PPE DETECTED" if is_en else "TIDAK ADA PEKERJA / APD TERDETEKSI"
             is_compliant = False
             violations_count = 0
             assessment = (
@@ -215,7 +238,7 @@ class SafetyPPEPredictor:
                 "Tidak ada pekerja atau atribut APD yang terdeteksi dalam frame. Silakan turunkan threshold atau arahkan kamera ke pekerja."
             )
         elif len(persons) == 0 and (len(hardhats) > 0 or len(vests) > 0):
-            compliance_status = "PARTIAL PPE DETECTED"
+            compliance_status = "PARTIAL PPE DETECTED" if is_en else "APD SEBAGIAN TERDETEKSI"
             is_compliant = True
             violations_count = 0
             assessment = (
@@ -236,7 +259,7 @@ class SafetyPPEPredictor:
 
             violations_count = len(violation_details)
             if violations_count > 0:
-                compliance_status = "VIOLATION DETECTED"
+                compliance_status = "VIOLATION DETECTED" if is_en else "PELANGGARAN K3 TERDETEKSI"
                 is_compliant = False
                 assessment = (
                     f"Safety Non-Compliance: Detected {len(persons)} worker(s) missing required PPE: {'; '.join(violation_details)}."
@@ -244,7 +267,7 @@ class SafetyPPEPredictor:
                     f"Peringatan K3: Terdeteksi {len(persons)} pekerja tanpa APD lengkap: {'; '.join(violation_details)}."
                 )
             else:
-                compliance_status = "COMPLIANT"
+                compliance_status = "COMPLIANT" if is_en else "PATUH STANDAR K3"
                 is_compliant = True
                 assessment = (
                     f"Safety Standards Met: {len(persons)} worker(s) fully equipped with PPE (Hardhat & Vest)."
