@@ -28,7 +28,7 @@ prometheus-client>=0.20.0
 
 # Frontend & Interactive UI
 streamlit>=1.32.0
-gradio>=5.16.0
+gradio>=5.0.0,<6.0.0
 
 # Testing & QA
 pytest>=8.0.0
