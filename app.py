@@ -38,11 +38,12 @@ except Exception as e:
 
 from src.serving.predictor import SafetyPPEPredictor
 
-# Optional ZeroGPU support if Space has GPU assigned
+# Optional ZeroGPU support if Space has GPU assigned (dynamic import prevents IDE linter errors on local machine)
 try:
-    import spaces
-    gpu_decorator = spaces.GPU
-except ImportError:
+    import importlib
+    spaces_mod = importlib.import_module("spaces")
+    gpu_decorator = getattr(spaces_mod, "GPU", lambda fn: fn)
+except (ImportError, ModuleNotFoundError, Exception):
     def gpu_decorator(fn):
         return fn
 
