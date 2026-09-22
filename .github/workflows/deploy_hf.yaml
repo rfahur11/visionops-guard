@@ -1,0 +1,22 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  sync-to-hugginface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            git push https://rfahur11:$HF_TOKEN@huggingface.co/spaces/rfahur11/visionops-guard main
+          else
+            echo "HF_TOKEN secret not configured yet. Skipping Hugging Face sync."
+          fi

@@ -1,8 +1,8 @@
 # VisionOps Guard - Dataset Specification (YOLO Format)
-path: ../data/processed  # dataset root dir
-train: images/train      # train images (relative to 'path')
-val: images/val          # val images (relative to 'path')
-test: images/test        # test images (optional)
+path: D:/porto/visionops-guard/data/processed  # absolute path for Ultralytics
+train: images/train
+val: images/val
+test: images/test
 
 # Classes
 names:

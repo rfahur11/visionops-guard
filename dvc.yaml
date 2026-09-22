@@ -23,3 +23,22 @@ stages:
       - config/model_config.yaml
     outs:
       - data/processed
+
+  train_yolo_model:
+    cmd: python src/models/train.py
+    deps:
+      - data/processed
+      - src/models/train.py
+      - config/model_config.yaml
+    outs:
+      - models/best_model.pt
+
+  convert_and_benchmark_onnx:
+    cmd: python src/models/convert_onnx.py
+    deps:
+      - models/best_model.pt
+      - src/models/convert_onnx.py
+      - config/model_config.yaml
+    outs:
+      - models/visionops_guard.onnx
+      - data/latency_benchmark.json

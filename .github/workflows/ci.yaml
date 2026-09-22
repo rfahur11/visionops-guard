@@ -1,0 +1,35 @@
+name: VisionOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy opencv-python-headless pillow pyyaml pandas onnxruntime pydantic fastapi httpx pytest
+
+      - name: Run Data QA Integrity Check
+        run: |
+          python src/data/download_dataset.py
+          python src/data/data_validation.py
+
+      - name: Run Pytest Automated Unit & Integration Suite
+        run: |
+          pytest tests/ -v

@@ -1,0 +1,34 @@
+{
+  "status": "success",
+  "has_dataset_drift": false,
+  "dataset_drift_score": 0.25,
+  "drift_threshold": 0.05,
+  "reference_samples": 40,
+  "current_samples": 10,
+  "feature_drift_details": {
+    "mean_brightness": {
+      "reference_mean": 68.29,
+      "current_mean": 67.96,
+      "percentage_change": 0.48,
+      "is_drifted": false
+    },
+    "std_brightness": {
+      "reference_mean": 21.75,
+      "current_mean": 22.09,
+      "percentage_change": 1.55,
+      "is_drifted": false
+    },
+    "contrast": {
+      "reference_mean": 164.82,
+      "current_mean": 172.6,
+      "percentage_change": 4.72,
+      "is_drifted": false
+    },
+    "sharpness": {
+      "reference_mean": 43.71,
+      "current_mean": 67.46,
+      "percentage_change": 54.34,
+      "is_drifted": true
+    }
+  }
+}

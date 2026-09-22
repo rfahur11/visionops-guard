@@ -31,6 +31,8 @@ data/processed/*
 models/*.pt
 models/*.onnx
 !models/.gitkeep
+yolov8n.pt
+runs/
 
 # IDEs
 .vscode/

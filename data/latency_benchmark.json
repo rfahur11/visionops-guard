@@ -1,0 +1,6 @@
+{
+  "pytorch_latency_ms": 35.42,
+  "onnx_latency_ms": 18.96,
+  "speedup_factor": "1.87x faster",
+  "num_runs": 50
+}
