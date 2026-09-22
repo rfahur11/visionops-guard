@@ -1,6 +1,6 @@
 {
-  "pytorch_latency_ms": 35.42,
-  "onnx_latency_ms": 18.96,
-  "speedup_factor": "1.87x faster",
+  "pytorch_latency_ms": 44.95,
+  "onnx_latency_ms": 23.42,
+  "speedup_factor": "1.92x faster",
   "num_runs": 50
 }
