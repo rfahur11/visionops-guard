@@ -1,6 +1,6 @@
 """
-VisionOps Guard - ONNX Runtime Inference Engine
-High-performance CVOps predictor for real-time safety PPE inspection.
+VisionOps Guard - Hybrid ONNX Runtime & PyTorch Inference Engine
+High-performance CVOps predictor with dual-mode fallback (ONNX Runtime -> PyTorch YOLO).
 """
 
 import base64
@@ -9,7 +9,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 import yaml
-import onnxruntime as ort
+from ultralytics import YOLO
+
+try:
+    import onnxruntime as ort
+    ORT_AVAILABLE = True
+except ImportError:
+    ORT_AVAILABLE = False
 
 
 class SafetyPPEPredictor:
@@ -28,39 +34,40 @@ class SafetyPPEPredictor:
         for name, hex_code in self.class_colors.items():
             hex_str = hex_code.lstrip("#")
             rgb = tuple(int(hex_str[i:i+2], 16) for i in (0, 2, 4))
-            self.bgr_colors[name] = (rgb[2], rgb[1], rgb[0]) # BGR
+            self.bgr_colors[name] = (rgb[2], rgb[1], rgb[0])  # BGR
 
-        # Model Loading
+        # Model Loading Logic
+        self.session = None
+        self.pt_model = None
+
         model_path = Path(self.config["model"]["onnx_export_path"])
         if not model_path.exists():
             model_path = Path("models/visionops_guard.onnx")
 
-        if not model_path.exists():
-            print(f"[!] '{model_path}' not found on disk. Auto-generating ONNX model...")
-            model_path.parent.mkdir(parents=True, exist_ok=True)
+        # Try loading ONNX model first
+        if ORT_AVAILABLE and model_path.exists():
             try:
-                from ultralytics import YOLO
-                base_yolo = YOLO("yolov8n.pt")
-                exported = base_yolo.export(format="onnx", imgsz=self.img_size, simplify=True)
-                import shutil
-                shutil.copy(exported, str(model_path))
-                print(f"[+] Fallback ONNX model created at: {model_path}")
+                print(f"[*] Loading ONNX Runtime Session: '{model_path}'")
+                self.session = ort.InferenceSession(str(model_path), providers=['CPUExecutionProvider'])
+                self.input_name = self.session.get_inputs()[0].name
+                self.output_names = [o.name for o in self.session.get_outputs()]
+                print("[+] ONNX Runtime Session initialized successfully.")
             except Exception as e:
-                print(f"[!] Fallback creation error: {e}")
+                print(f"[!] ONNX Runtime initialization failed: {e}")
+                self.session = None
 
-        print(f"[*] Loading ONNX Runtime Session: '{model_path}'")
-        try:
-            self.session = ort.InferenceSession(str(model_path), providers=['CPUExecutionProvider'])
-        except Exception as e:
-            print(f"[!] Error loading ONNX session: {e}")
-            self.session = ort.InferenceSession(str(model_path))
-
-        self.input_name = self.session.get_inputs()[0].name
-        self.output_names = [o.name for o in self.session.get_outputs()]
+        # Fallback to PyTorch YOLO model if ONNX is not available
+        if self.session is None:
+            print("[*] Falling back to native PyTorch YOLO Engine...")
+            pt_path = Path("models/best_model.pt")
+            if not pt_path.exists():
+                pt_path = Path("yolov8n.pt")
+            self.pt_model = YOLO(str(pt_path))
+            print(f"[+] PyTorch YOLO model loaded from: {pt_path}")
 
     def preprocess(self, img_bytes: bytes):
         """
-        Decodes raw bytes and resizes to target input shape (1, 3, 640, 640).
+        Decodes raw bytes and resizes to target input shape.
         """
         nparr = np.frombuffer(img_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -76,16 +83,16 @@ class SafetyPPEPredictor:
 
         return img, input_tensor, orig_w, orig_h
 
-    def postprocess(self, outputs, orig_w: int, orig_h: int):
+    def postprocess_onnx(self, outputs, orig_w: int, orig_h: int):
         """
-        Parses YOLO ONNX output tensor shape [1, 9, 8400] and extracts detections.
+        Parses YOLO ONNX output tensor and extracts detections.
         """
         preds = outputs[0]
         if len(preds.shape) == 3:
-            preds = preds[0]  # (9, 8400) or (8400, 9)
+            preds = preds[0]
 
         if preds.shape[0] < preds.shape[1]:
-            preds = preds.T  # Transpose to (8400, 9) -> [xc, yc, w, h, cls0, cls1, cls2, cls3, cls4]
+            preds = preds.T
 
         boxes = []
         confidences = []
@@ -101,7 +108,6 @@ class SafetyPPEPredictor:
 
             if confidence >= self.conf_threshold:
                 xc, yc, w, h = row[0:4]
-                # Convert center xywh to pixel corner box xywh
                 x1 = int((xc - w / 2) * scale_x)
                 y1 = int((yc - h / 2) * scale_y)
                 box_w = int(w * scale_x)
@@ -111,9 +117,7 @@ class SafetyPPEPredictor:
                 confidences.append(confidence)
                 class_ids.append(class_id)
 
-        # Apply Non-Maximum Suppression (NMS)
         indices = cv2.dnn.NMSBoxes(boxes, confidences, self.conf_threshold, self.iou_threshold)
-
         detections = []
         if len(indices) > 0:
             flat_indices = indices.flatten() if isinstance(indices, np.ndarray) else indices
@@ -121,7 +125,6 @@ class SafetyPPEPredictor:
                 box = boxes[i]
                 cls_id = class_ids[i]
                 cls_name = self.classes.get(cls_id, f"class_{cls_id}")
-
                 detections.append({
                     "class_id": cls_id,
                     "class_name": cls_name,
@@ -129,7 +132,27 @@ class SafetyPPEPredictor:
                     "box_xywh": box,
                     "box_xyxy": [box[0], box[1], box[0] + box[2], box[1] + box[3]]
                 })
+        return detections
 
+    def predict_pytorch(self, orig_img: np.ndarray):
+        """
+        Inference using native PyTorch YOLO model fallback.
+        """
+        results = self.pt_model(orig_img, conf=self.conf_threshold, iou=self.iou_threshold, verbose=False)[0]
+        detections = []
+        for box in results.boxes:
+            cls_id = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            xyxy = [int(x) for x in box.xyxy[0].tolist()]
+            xywh = [xyxy[0], xyxy[1], xyxy[2] - xyxy[0], xyxy[3] - xyxy[1]]
+            cls_name = self.classes.get(cls_id, f"class_{cls_id}")
+            detections.append({
+                "class_id": cls_id,
+                "class_name": cls_name,
+                "confidence": round(conf, 4),
+                "box_xywh": xywh,
+                "box_xyxy": xyxy
+            })
         return detections
 
     def draw_detections(self, orig_img: np.ndarray, detections: list) -> np.ndarray:
@@ -154,14 +177,17 @@ class SafetyPPEPredictor:
 
     def predict(self, img_bytes: bytes) -> dict:
         """
-        Main inference entry point.
+        Main inference entry point. Supports ONNX Runtime with PyTorch YOLO fallback.
         """
         start_t = time.time()
         orig_img, input_tensor, orig_w, orig_h = self.preprocess(img_bytes)
-        
-        outputs = self.session.run(self.output_names, {self.input_name: input_tensor})
-        detections = self.postprocess(outputs, orig_w, orig_h)
-        
+
+        if self.session is not None:
+            outputs = self.session.run(self.output_names, {self.input_name: input_tensor})
+            detections = self.postprocess_onnx(outputs, orig_w, orig_h)
+        else:
+            detections = self.predict_pytorch(orig_img)
+
         latency_ms = round((time.time() - start_t) * 1000.0, 2)
 
         # Generate base64 annotated preview

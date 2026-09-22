@@ -30,6 +30,7 @@ data/processed/*
 !data/processed/.gitkeep
 models/*.pt
 models/*.onnx
+!models/visionops_guard.onnx
 !models/.gitkeep
 yolov8n.pt
 runs/
