@@ -51,12 +51,14 @@ predictor = SafetyPPEPredictor()
 
 
 @gpu_decorator
-def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
+def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, progress=gr.Progress(track_tqdm=True)):
     """
-    Gradio prediction function.
+    Gradio prediction function with real-time animated progress bar.
     """
     if input_image is None:
-        return None, "Please upload an image or capture from webcam."
+        return None, "⚠️ Belum ada foto yang dipilih. Silakan upload gambar atau klik tombol kamera untuk menjepret foto."
+
+    progress(0.15, desc="📸 Mempersiapkan frame gambar...")
 
     # Convert RGB to BGR for OpenCV encoding
     img_bgr = cv2.cvtColor(input_image, cv2.COLOR_RGB2BGR)
@@ -66,9 +68,11 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
     # Update confidence threshold
     predictor.conf_threshold = conf_threshold
 
+    progress(0.50, desc="⚡ Menjalankan inferensi ONNX Runtime...")
     # Run Prediction
     result = predictor.predict(img_bytes)
 
+    progress(0.85, desc="🛡️ Menganalisis kepatuhan standar K3 APD...")
     # Decode base64 preview image back to RGB
     img_data = base64.b64decode(result["annotated_image_base64"])
     nparr = np.frombuffer(img_data, np.uint8)
@@ -101,6 +105,7 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
         ]
     }
 
+    progress(1.0, desc="✅ Analisis Selesai!")
     formatted_json_str = json.dumps(summary, indent=2, ensure_ascii=False)
     return ann_rgb, formatted_json_str
 
@@ -109,42 +114,66 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
 with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ VisionOps Guard — Real-Time Safety PPE Inspection")
     gr.Markdown(
-        "Upload a construction or industrial factory workplace image, or use your webcam to inspect hardhat and safety vest compliance in real-time using ONNX Runtime."
+        "Sistem deteksi visual Alat Pelindung Diri (APD/PPE) dan K3 industri berbasis ONNX Runtime. "
+        "Pilih tab **Kamera Langsung** atau **Upload File Gambar** di bawah untuk memulai inspeksi."
     )
 
     with gr.Row():
-        with gr.Column():
-            input_img = gr.Image(
-                type="numpy",
-                sources=["upload", "webcam"],
-                label="📸 Input: Upload Foto atau Webcam Capture"
-            )
-            conf_slider = gr.Slider(minimum=0.05, maximum=1.0, value=0.20, step=0.05, label="Confidence Threshold (Rekomendasi: 0.15 - 0.25)")
-            submit_btn = gr.Button("Inspect Safety Compliance 🚀", variant="primary")
-            
-            gr.Markdown(
-                """
-                > 💡 **Panduan Menggunakan Kamera/Webcam:**
-                > 1. Izinkan akses kamera browser.
-                > 2. **Klik ikon kamera [📷]** di bagian bawah frame video untuk menjepret foto (*Snapshot*).
-                > 3. Setelah foto terjepret (freeze), sistem akan otomatis memeriksa atau Anda dapat menekan **Inspect Safety Compliance 🚀**.
-                """
+        with gr.Column(scale=1):
+            with gr.Tabs():
+                with gr.TabItem("📸 Kamera Langsung (Webcam)"):
+                    webcam_img = gr.Image(
+                        sources=["webcam"],
+                        type="numpy",
+                        label="Live Webcam Stream"
+                    )
+                    gr.Markdown("💡 *Posisikan diri Anda, klik icon kamera **[📷]** di tengah bawah video untuk snap foto, lalu klik tombol periksa di bawah:*")
+                    webcam_btn = gr.Button("⚡ Periksa Kepatuhan K3 dari Kamera", variant="primary")
+
+                with gr.TabItem("📁 Upload File Gambar"):
+                    upload_img = gr.Image(
+                        sources=["upload"],
+                        type="numpy",
+                        label="Pilih atau Drag-and-Drop Gambar Proyek"
+                    )
+                    upload_btn = gr.Button("⚡ Periksa Kepatuhan K3 dari File", variant="primary")
+
+            conf_slider = gr.Slider(
+                minimum=0.05,
+                maximum=1.0,
+                value=0.20,
+                step=0.05,
+                label="Confidence Threshold (Rekomendasi: 0.15 - 0.25)"
             )
         
-        with gr.Column():
+        with gr.Column(scale=1):
             output_img = gr.Image(type="numpy", label="ONNX Detection Result")
             output_details = gr.Textbox(label="Compliance Analytics & Bounding Boxes", lines=14)
 
-    submit_btn.click(
+    # Event Handlers for Webcam
+    webcam_btn.click(
         fn=inspect_safety_ppe,
-        inputs=[input_img, conf_slider],
+        inputs=[webcam_img, conf_slider],
+        outputs=[output_img, output_details],
+        api_name=False
+    )
+    webcam_img.change(
+        fn=inspect_safety_ppe,
+        inputs=[webcam_img, conf_slider],
         outputs=[output_img, output_details],
         api_name=False
     )
 
-    input_img.change(
+    # Event Handlers for File Upload
+    upload_btn.click(
         fn=inspect_safety_ppe,
-        inputs=[input_img, conf_slider],
+        inputs=[upload_img, conf_slider],
+        outputs=[output_img, output_details],
+        api_name=False
+    )
+    upload_img.change(
+        fn=inspect_safety_ppe,
+        inputs=[upload_img, conf_slider],
         outputs=[output_img, output_details],
         api_name=False
     )
@@ -161,7 +190,7 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
     if existing_samples:
         gr.Examples(
             examples=existing_samples,
-            inputs=[input_img, conf_slider],
+            inputs=[upload_img, conf_slider],
             label="📁 Klik Contoh Gambar Proyek Lapangan (Pre-loaded Test Images)"
         )
 

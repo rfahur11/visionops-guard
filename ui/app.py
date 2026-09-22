@@ -83,8 +83,9 @@ def main():
     if image_bytes is not None:
         col1, col2 = st.columns(2)
 
-        # Run ONNX Prediction
-        result = predictor.predict(image_bytes)
+        # Run ONNX Prediction with spinner feedback
+        with st.spinner("⚡ Menjalankan inferensi ONNX Runtime & evaluasi standar K3..."):
+            result = predictor.predict(image_bytes)
 
         with col1:
             st.markdown("### 📷 Original Input Image")
@@ -97,9 +98,6 @@ def main():
             st.markdown("### 🎯 ONNX Real-Time Detection")
             img_b64 = result["annotated_image_base64"]
             img_data = base64.b64decode(img_b64)
-            annotated_pil = PIL.Image.open(io.BytesIO(img_data)) if 'io' in locals() else None
-            
-            # Decode annotated image
             nparr_ann = np.frombuffer(img_data, np.uint8)
             ann_img = cv2.imdecode(nparr_ann, cv2.IMREAD_COLOR)
             ann_rgb = cv2.cvtColor(ann_img, cv2.COLOR_BGR2RGB)
@@ -108,10 +106,13 @@ def main():
         st.markdown("---")
 
         # Status Banner
+        compliance_status = result.get("compliance_status", "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED")
         if result["is_compliant"]:
-            st.markdown('<div class="compliant-banner">✅ K3 SAFETY COMPLIANT — All workers equipped with Hardhat & Vest</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="compliant-banner">✅ {compliance_status} — {result.get("assessment", "Standar K3 Terpenuhi")}</div>', unsafe_allow_html=True)
+        elif compliance_status.startswith("NO"):
+            st.info(f"ℹ️ {compliance_status}: {result.get('assessment', 'Tidak ada pekerja atau APD terdeteksi.')}")
         else:
-            st.markdown(f'<div class="violation-banner">⚠️ SAFETY VIOLATION DETECTED — {result["violations_count"]} Non-Compliance Alert(s)</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="violation-banner">⚠️ {compliance_status} — {result.get("assessment", f"{result[\"violations_count\"]} Non-Compliance Alert(s)")}</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
