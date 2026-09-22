@@ -114,15 +114,35 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
 
     with gr.Row():
         with gr.Column():
-            input_img = gr.Image(type="numpy", label="Upload Image / Webcam Capture")
+            input_img = gr.Image(
+                type="numpy",
+                sources=["upload", "webcam"],
+                label="📸 Input: Upload Foto atau Webcam Capture"
+            )
             conf_slider = gr.Slider(minimum=0.05, maximum=1.0, value=0.20, step=0.05, label="Confidence Threshold (Rekomendasi: 0.15 - 0.25)")
             submit_btn = gr.Button("Inspect Safety Compliance 🚀", variant="primary")
+            
+            gr.Markdown(
+                """
+                > 💡 **Panduan Menggunakan Kamera/Webcam:**
+                > 1. Izinkan akses kamera browser.
+                > 2. **Klik ikon kamera [📷]** di bagian bawah frame video untuk menjepret foto (*Snapshot*).
+                > 3. Setelah foto terjepret (freeze), sistem akan otomatis memeriksa atau Anda dapat menekan **Inspect Safety Compliance 🚀**.
+                """
+            )
         
         with gr.Column():
             output_img = gr.Image(type="numpy", label="ONNX Detection Result")
-            output_details = gr.Textbox(label="Compliance Analytics & Bounding Boxes", lines=12)
+            output_details = gr.Textbox(label="Compliance Analytics & Bounding Boxes", lines=14)
 
     submit_btn.click(
+        fn=inspect_safety_ppe,
+        inputs=[input_img, conf_slider],
+        outputs=[output_img, output_details],
+        api_name=False
+    )
+
+    input_img.change(
         fn=inspect_safety_ppe,
         inputs=[input_img, conf_slider],
         outputs=[output_img, output_details],

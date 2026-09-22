@@ -46,7 +46,7 @@ def main():
 
     # Sidebar Controls
     st.sidebar.header("⚙️ Model & Inference Controls")
-    conf_thresh = st.sidebar.slider("Confidence Threshold", 0.1, 1.0, 0.45, 0.05)
+    conf_thresh = st.sidebar.slider("Confidence Threshold", 0.05, 1.0, 0.20, 0.05, help="Rekomendasi: 0.15 - 0.25")
     iou_thresh = st.sidebar.slider("NMS IoU Threshold", 0.1, 1.0, 0.45, 0.05)
     predictor.conf_threshold = conf_thresh
     predictor.iou_threshold = iou_thresh
@@ -57,7 +57,7 @@ def main():
     st.sidebar.info("Model Device: **CUDA GPU / CPU**")
 
     # Input Method Selection
-    input_mode = st.radio("Select Visual Input Source:", ["Upload Image File", "Use Sample Dataset Image"], horizontal=True)
+    input_mode = st.radio("Select Visual Input Source:", ["Upload Image File", "Live Camera (Webcam)", "Use Sample Dataset Image"], horizontal=True)
 
     image_bytes = None
 
@@ -65,6 +65,10 @@ def main():
         uploaded_file = st.file_uploader("Upload Inspection Image (JPG / PNG):", type=["jpg", "jpeg", "png"])
         if uploaded_file is not None:
             image_bytes = uploaded_file.read()
+    elif input_mode == "Live Camera (Webcam)":
+        camera_file = st.camera_input("Ambil Foto dari Kamera Langsung:")
+        if camera_file is not None:
+            image_bytes = camera_file.read()
     else:
         sample_dir = Path("data/raw/images/test")
         sample_files = list(sample_dir.glob("*.jpg")) if sample_dir.exists() else []
