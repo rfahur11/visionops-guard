@@ -51,9 +51,9 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
 
     # Format summary dictionary
     summary = {
-        "status": "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED",
+        "status": "COMPLIANT ✅" if result["is_compliant"] else "VIOLATION DETECTED ⚠️",
         "violations_count": result["violations_count"],
-        "inference_latency_ms": result["latency_ms"],
+        "inference_latency_ms": round(result["latency_ms"], 2),
         "detections_count": len(result["detections"]),
         "detected_objects": [
             {
@@ -70,9 +70,11 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
 
 
 # Create Gradio Blocks Interface
-with gr.Blocks(title="VisionOps Guard - Safety PPE AI") as demo:
+with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ VisionOps Guard — Real-Time Safety PPE Inspection")
-    gr.Markdown("Upload a construction/factory image or use your webcam to inspect hardhat and safety vest compliance.")
+    gr.Markdown(
+        "Upload a construction or industrial factory workplace image to inspect hardhat and safety vest compliance in real-time using ONNX Runtime."
+    )
 
     with gr.Row():
         with gr.Column():
@@ -87,9 +89,10 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI") as demo:
     submit_btn.click(
         fn=inspect_safety_ppe,
         inputs=[input_img, conf_slider],
-        outputs=[output_img, output_details]
+        outputs=[output_img, output_details],
+        api_name="predict"
     )
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(server_name="0.0.0.0", server_port=7860)
