@@ -5,18 +5,18 @@ on:
     branches: [ main ]
 
 jobs:
-  sync-to-hugginface:
+  sync-to-huggingface:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Push to Hugging Face Spaces
+      - name: Push to Hugging Face Space (rfahrur6045/mlops-final-copy)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ -n "$HF_TOKEN" ]; then
-            git push https://rfahur11:$HF_TOKEN@huggingface.co/spaces/rfahur11/visionops-guard main
+            git push --force https://rfahrur6045:$HF_TOKEN@huggingface.co/spaces/rfahrur6045/mlops-final-copy main
           else
-            echo "HF_TOKEN secret not configured yet. Skipping Hugging Face sync."
+            echo "HF_TOKEN secret not configured yet in GitHub Repository Secrets. Skipping Hugging Face sync."
           fi

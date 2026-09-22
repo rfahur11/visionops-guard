@@ -1,3 +1,14 @@
+---
+title: VisionOps Guard Safety PPE
+emoji: 🛡️
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 5.10.0
+app_file: app.py
+pinned: false
+---
+
 # VisionOps Guard 🛡️
 > **Real-Time Industrial Safety PPE Detection & CVOps Pipeline**
 
