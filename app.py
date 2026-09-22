@@ -51,61 +51,30 @@ except (ImportError, ModuleNotFoundError, Exception):
 predictor = SafetyPPEPredictor()
 
 
-def create_placeholder_image(lang_choice: str = "Bahasa Indonesia (ID)") -> np.ndarray:
-    """Generates a dark slate graphic placeholder image when no camera snapshot is present."""
-    is_en = "EN" in str(lang_choice)
-    img = np.zeros((480, 640, 3), dtype=np.uint8)
-    img[:] = (31, 41, 55)  # Dark slate #1F2937
-
-    title = "NO WEBCAM PHOTO CAPTURED" if is_en else "BELUM ADA FOTO DARI KAMERA"
-    line1 = "Please click the camera icon [📷] on the video" if is_en else "Silakan klik icon camera [📷] pada video"
-    line2 = "to snap a photo first, then click Inspect Safety." if is_en else "untuk menjepret foto sebelum memeriksa."
-
-    cv2.putText(img, title, (45, 190), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (239, 68, 68), 2, cv2.LINE_AA)
-    cv2.putText(img, line1, (55, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (229, 231, 235), 2, cv2.LINE_AA)
-    cv2.putText(img, line2, (55, 305), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (229, 231, 235), 2, cv2.LINE_AA)
-    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-
 @gpu_decorator
 def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, lang_choice: str = "Bahasa Indonesia (ID)", progress=gr.Progress(track_tqdm=True)):
     """
-    Gradio generator function with bilingual support, instant preview yield, and zero-blank progress feedback.
+    Gradio prediction function with bilingual support and real-time animated progress bar.
     """
     is_en = "EN" in str(lang_choice)
 
     if input_image is None:
         empty_res = {
-            "status": "AWAITING SNAPSHOT ℹ️" if is_en else "MENUNGGU SNAPSHOT ℹ️",
+            "status": "AWAITING INPUT ℹ️" if is_en else "MENUNGGU INPUT ℹ️",
             ("safety_assessment" if is_en else "evaluasi_k3"): (
-                "No camera photo snapped. Please click the camera icon [📷] on the video feed to snap a photo."
+                "No image provided. Please snap a webcam photo or upload an image."
                 if is_en else
-                "Belum ada foto yang dijepret. Silakan klik icon kamera [📷] pada video untuk mengunggah/snap foto."
+                "Belum ada foto yang dipilih. Silakan snap foto dari webcam atau unggah gambar."
             ),
             "inference_latency_ms": 0.0,
             ("detections_count" if is_en else "total_deteksi"): 0
         }
-        placeholder_img = create_placeholder_image(lang_choice)
-        yield placeholder_img, json.dumps(empty_res, indent=2, ensure_ascii=False)
-        return
-
-    # Step 1: Immediately yield intermediate processing status to eliminate any blank delay!
-    processing_json = json.dumps({
-        "status": "⏳ PROCESSING INFERENCE..." if is_en else "⏳ SEDANG MEMPROSES...",
-        ("safety_assessment" if is_en else "evaluasi_k3"): (
-            "⚡ Running ONNX Runtime inference engine & safety evaluation..."
-            if is_en else
-            "⚡ Menjalankan model ONNX Runtime & evaluasi kepatuhan K3..."
-        ),
-        "inference_latency_ms": "Calculating...",
-        ("detections_count" if is_en else "total_deteksi"): 0
-    }, indent=2, ensure_ascii=False)
+        return None, json.dumps(empty_res, indent=2, ensure_ascii=False)
 
     prep_msg = "📸 Preparing and decoding image frame..." if is_en else "📸 Mempersiapkan frame gambar..."
     progress(0.15, desc=prep_msg)
-    yield input_image, processing_json
 
-    # Step 2: Convert RGB to BGR and encode
+    # Convert RGB to BGR and encode
     img_bgr = cv2.cvtColor(input_image, cv2.COLOR_RGB2BGR)
     _, buffer = cv2.imencode(".jpg", img_bgr)
     img_bytes = buffer.tobytes()
@@ -173,7 +142,7 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, la
     done_msg = "✅ Inspection Completed!" if is_en else "✅ Analisis Selesai!"
     progress(1.0, desc=done_msg)
     formatted_json_str = json.dumps(summary, indent=2, ensure_ascii=False)
-    yield ann_rgb, formatted_json_str
+    return ann_rgb, formatted_json_str
 
 
 def switch_language(lang_choice, webcam_image, upload_image, conf_threshold):
@@ -208,9 +177,7 @@ def switch_language(lang_choice, webcam_image, upload_image, conf_threshold):
 
     active_img = webcam_image if webcam_image is not None else upload_image
     if active_img is not None:
-        # Run generator to get final output
-        res_list = list(inspect_safety_ppe(active_img, conf_threshold, lang_choice))
-        ann_rgb, json_str = res_list[-1]
+        ann_rgb, json_str = inspect_safety_ppe(active_img, conf_threshold, lang_choice)
         return (
             gr.update(value=desc_val),
             gr.update(value=cam_hint_val),
@@ -242,7 +209,6 @@ def switch_language(lang_choice, webcam_image, upload_image, conf_threshold):
                 "total_deteksi": 0
             }, indent=2, ensure_ascii=False)
         )
-        placeholder_img = create_placeholder_image(lang_choice)
         return (
             gr.update(value=desc_val),
             gr.update(value=cam_hint_val),
@@ -253,7 +219,7 @@ def switch_language(lang_choice, webcam_image, upload_image, conf_threshold):
             gr.update(label=upload_label_val),
             gr.update(label=tab_cam_val),
             gr.update(label=tab_up_val),
-            gr.update(label=out_img_label_val, value=placeholder_img),
+            gr.update(label=out_img_label_val, value=None),
             gr.update(label=out_details_label_val, value=init_msg)
         )
 
@@ -311,11 +277,7 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
             )
         
         with gr.Column(scale=1):
-            output_img = gr.Image(
-                type="numpy",
-                label="Hasil Deteksi Visual ONNX",
-                value=create_placeholder_image("Bahasa Indonesia (ID)")
-            )
+            output_img = gr.Image(type="numpy", label="Hasil Deteksi Visual ONNX")
             output_details = gr.Textbox(
                 label="Analisis Kepatuhan K3 & Bounding Box",
                 value=initial_details_placeholder,
