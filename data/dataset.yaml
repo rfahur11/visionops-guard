@@ -6,8 +6,14 @@ test: images/test
 
 # Classes
 names:
-  0: person
-  1: hardhat
+  0: helmet
+  1: gloves
   2: vest
-  3: no_hardhat
-  4: no_vest
+  3: boots
+  4: goggles
+  5: none
+  6: person
+  7: no_helmet
+  8: no_goggles
+  9: no_gloves
+  10: no_boots

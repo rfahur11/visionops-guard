@@ -10,17 +10,29 @@ data:
   img_size: 640
   valid_extensions: [".jpg", ".jpeg", ".png"]
   classes:
-    0: "person"
-    1: "hardhat"
+    0: "helmet"
+    1: "gloves"
     2: "vest"
-    3: "no_hardhat"
-    4: "no_vest"
+    3: "boots"
+    4: "goggles"
+    5: "none"
+    6: "person"
+    7: "no_helmet"
+    8: "no_goggles"
+    9: "no_gloves"
+    10: "no_boots"
   class_colors:
-    person: "#3B82F6"      # Blue
-    hardhat: "#10B981"     # Emerald Green
+    helmet: "#10B981"      # Emerald Green
+    gloves: "#8B5CF6"      # Purple
     vest: "#06B6D4"        # Cyan
-    no_hardhat: "#EF4444"  # Red Alert
-    no_vest: "#F59E0B"     # Amber Alert
+    boots: "#F59E0B"       # Amber
+    goggles: "#3B82F6"     # Blue
+    none: "#9CA3AF"        # Gray
+    person: "#3B82F6"      # Blue
+    no_helmet: "#EF4444"   # Red Alert
+    no_goggles: "#EF4444"  # Red Alert
+    no_gloves: "#EF4444"   # Red Alert
+    no_boots: "#EF4444"    # Red Alert
 
 augmentation:
   horizontal_flip_p: 0.5

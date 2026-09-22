@@ -199,25 +199,45 @@ class SafetyPPEPredictor:
         # Smart Industrial PPE Compliance Assessment Logic
         is_en = str(lang).lower().startswith("en")
         persons = [d for d in detections if d["class_name"] == "person"]
-        hardhats = [d for d in detections if d["class_name"] == "hardhat"]
+        helmets = [d for d in detections if d["class_name"] in ["helmet", "hardhat"]]
         vests = [d for d in detections if d["class_name"] == "vest"]
-        no_hardhats = [d for d in detections if d["class_name"] == "no_hardhat"]
-        no_vests = [d for d in detections if d["class_name"] == "no_vest"]
+        gloves = [d for d in detections if d["class_name"] == "gloves"]
+        boots = [d for d in detections if d["class_name"] == "boots"]
+        goggles = [d for d in detections if d["class_name"] == "goggles"]
+
+        no_helmets = [d for d in detections if d["class_name"] in ["no_helmet", "no_hardhat"]]
+        no_goggles = [d for d in detections if d["class_name"] == "no_goggles"]
+        no_gloves = [d for d in detections if d["class_name"] == "no_gloves"]
+        no_boots = [d for d in detections if d["class_name"] == "no_boots"]
 
         # Bilingual display names for detected classes
         class_display_map_id = {
-            "hardhat": "Helm Proyek (Hardhat)",
-            "no_hardhat": "Tanpa Helm (No Hardhat)",
+            "helmet": "Helm Proyek (Helmet)",
+            "no_helmet": "Tanpa Helm (No Helmet)",
             "vest": "Rompi Safety (Vest)",
             "no_vest": "Tanpa Rompi (No Vest)",
-            "person": "Pekerja (Person)"
+            "gloves": "Sarung Tangan Safety (Gloves)",
+            "no_gloves": "Tanpa Sarung Tangan (No Gloves)",
+            "boots": "Sepatu Safety (Boots)",
+            "no_boots": "Tanpa Sepatu Safety (No Boots)",
+            "goggles": "Kacamata Safety (Goggles)",
+            "no_goggles": "Tanpa Kacamata (No Goggles)",
+            "person": "Pekerja (Person)",
+            "none": "Lainnya (None)"
         }
         class_display_map_en = {
-            "hardhat": "Safety Hardhat",
-            "no_hardhat": "No Hardhat (Violation)",
+            "helmet": "Safety Helmet",
+            "no_helmet": "No Helmet (Violation)",
             "vest": "Safety Vest",
             "no_vest": "No Vest (Violation)",
-            "person": "Worker / Person"
+            "gloves": "Safety Gloves",
+            "no_gloves": "No Gloves (Violation)",
+            "boots": "Safety Boots",
+            "no_boots": "No Boots (Violation)",
+            "goggles": "Safety Goggles",
+            "no_goggles": "No Goggles (Violation)",
+            "person": "Worker / Person",
+            "none": "Other"
         }
 
         for d in detections:
@@ -237,24 +257,36 @@ class SafetyPPEPredictor:
                 if is_en else
                 "Tidak ada pekerja atau atribut APD yang terdeteksi dalam frame. Silakan turunkan threshold atau arahkan kamera ke pekerja."
             )
-        elif len(persons) == 0 and (len(hardhats) > 0 or len(vests) > 0):
+        elif len(persons) == 0 and (len(helmets) > 0 or len(vests) > 0 or len(gloves) > 0 or len(boots) > 0):
             compliance_status = "PARTIAL PPE DETECTED" if is_en else "APD SEBAGIAN TERDETEKSI"
             is_compliant = True
             violations_count = 0
             assessment = (
-                "Safety PPE items (hardhat / vest) detected in workspace."
+                "Safety PPE items (helmet / vest / boots) detected in workspace."
                 if is_en else
-                "Atribut APD (helm / rompi) terdeteksi di area kerja."
+                "Atribut APD (helm / rompi / sepatu) terdeteksi di area kerja."
             )
         else:
             # When person is detected:
-            if len(no_hardhats) > 0 or len(hardhats) == 0:
+            if len(no_helmets) > 0 or len(helmets) == 0:
                 violation_details.append(
-                    "Worker Missing Safety Hardhat" if is_en else "Pekerja Tidak Memakai Helm Proyek (Missing Hardhat)"
+                    "Worker Missing Safety Helmet" if is_en else "Pekerja Tidak Memakai Helm Proyek (Missing Helmet)"
                 )
-            if len(no_vests) > 0 or len(vests) == 0:
+            if len(vests) == 0:
                 violation_details.append(
                     "Worker Missing High-Visibility Vest" if is_en else "Pekerja Tidak Memakai Rompi Safety (Missing Safety Vest)"
+                )
+            if len(no_boots) > 0:
+                violation_details.append(
+                    "Worker Missing Safety Boots" if is_en else "Pekerja Tidak Memakai Sepatu Safety (Missing Boots)"
+                )
+            if len(no_gloves) > 0:
+                violation_details.append(
+                    "Worker Missing Safety Gloves" if is_en else "Pekerja Tidak Memakai Sarung Tangan (Missing Gloves)"
+                )
+            if len(no_goggles) > 0:
+                violation_details.append(
+                    "Worker Missing Safety Goggles" if is_en else "Pekerja Tidak Memakai Kacamata Safety (Missing Goggles)"
                 )
 
             violations_count = len(violation_details)
@@ -270,9 +302,9 @@ class SafetyPPEPredictor:
                 compliance_status = "COMPLIANT" if is_en else "PATUH STANDAR K3"
                 is_compliant = True
                 assessment = (
-                    f"Safety Standards Met: {len(persons)} worker(s) fully equipped with PPE (Hardhat & Vest)."
+                    f"Safety Standards Met: {len(persons)} worker(s) fully equipped with Multi-PPE (Helmet, Vest & Safety Gear)."
                     if is_en else
-                    f"Standar K3 Terpenuhi: {len(persons)} pekerja terdeteksi mengenakan APD lengkap (Helm & Rompi)."
+                    f"Standar K3 Terpenuhi: {len(persons)} pekerja terdeteksi mengenakan APD lengkap (Helm, Rompi & Perlengkapan K3)."
                 )
 
         return {
