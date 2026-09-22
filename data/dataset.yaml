@@ -1,0 +1,13 @@
+# VisionOps Guard - Dataset Specification (YOLO Format)
+path: ../data/processed  # dataset root dir
+train: images/train      # train images (relative to 'path')
+val: images/val          # val images (relative to 'path')
+test: images/test        # test images (optional)
+
+# Classes
+names:
+  0: person
+  1: hardhat
+  2: vest
+  3: no_hardhat
+  4: no_vest

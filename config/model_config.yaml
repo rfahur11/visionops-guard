@@ -1,0 +1,48 @@
+project:
+  name: "VisionOps Guard"
+  version: "1.0.0"
+  description: "Real-Time Industrial Safety PPE Detection & CVOps Pipeline"
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  dataset_yaml: "data/dataset.yaml"
+  img_size: 640
+  valid_extensions: [".jpg", ".jpeg", ".png"]
+  classes:
+    0: "person"
+    1: "hardhat"
+    2: "vest"
+    3: "no_hardhat"
+    4: "no_vest"
+  class_colors:
+    person: "#3B82F6"      # Blue
+    hardhat: "#10B981"     # Emerald Green
+    vest: "#06B6D4"        # Cyan
+    no_hardhat: "#EF4444"  # Red Alert
+    no_vest: "#F59E0B"     # Amber Alert
+
+augmentation:
+  horizontal_flip_p: 0.5
+  random_brightness_contrast_p: 0.3
+  motion_blur_p: 0.2
+  shift_scale_rotate_p: 0.3
+
+model:
+  architecture: "yolov8n"  # Lightweight nano backbone for high FPS / low latency
+  epochs: 15
+  batch_size: 16
+  learning_rate: 0.01
+  onnx_export_path: "models/visionops_guard.onnx"
+  quantization: "FP16"
+
+inference:
+  conf_threshold: 0.45
+  iou_threshold: 0.45
+  max_detections: 100
+  target_latency_ms: 35.0
+
+monitoring:
+  drift_reference_path: "data/processed/reference_features.csv"
+  drift_threshold: 0.05
+  alert_webhook_url: ""

@@ -1,0 +1,58 @@
+schema: '2.0'
+stages:
+  acquire_data:
+    cmd: python src/data/download_dataset.py
+    deps:
+    - path: src/data/download_dataset.py
+      hash: md5
+      md5: 5639bd0da615ede66de4166450b2878d
+      size: 4918
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: 709d22547099481e6003831fcddaf5aa.dir
+      size: 1919478
+      nfiles: 121
+  validate_data_qa:
+    cmd: python src/data/data_validation.py
+    deps:
+    - path: config/model_config.yaml
+      hash: md5
+      md5: 602acc5ce374e2c9f869239b78cfb7cc
+      size: 1163
+    - path: data/raw
+      hash: md5
+      md5: 709d22547099481e6003831fcddaf5aa.dir
+      size: 1919478
+      nfiles: 121
+    - path: src/data/data_validation.py
+      hash: md5
+      md5: 95908cc4b517f6941c1244cee985f82b
+      size: 5206
+    outs:
+    - path: data/qa_report.json
+      hash: md5
+      md5: d27931d354628b370862f85a81821fdc
+      size: 684
+  preprocess_and_augment:
+    cmd: python src/data/preprocess.py
+    deps:
+    - path: config/model_config.yaml
+      hash: md5
+      md5: 602acc5ce374e2c9f869239b78cfb7cc
+      size: 1163
+    - path: data/raw
+      hash: md5
+      md5: 709d22547099481e6003831fcddaf5aa.dir
+      size: 1919478
+      nfiles: 121
+    - path: src/data/preprocess.py
+      hash: md5
+      md5: 465c68077b8af6739c9a31fa22af5133
+      size: 5596
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: ce251b9eadf7702d924243aae5b72cd8.dir
+      size: 1872722
+      nfiles: 121

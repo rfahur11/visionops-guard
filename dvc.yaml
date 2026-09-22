@@ -1,0 +1,25 @@
+stages:
+  acquire_data:
+    cmd: python src/data/download_dataset.py
+    deps:
+      - src/data/download_dataset.py
+    outs:
+      - data/raw
+
+  validate_data_qa:
+    cmd: python src/data/data_validation.py
+    deps:
+      - data/raw
+      - src/data/data_validation.py
+      - config/model_config.yaml
+    outs:
+      - data/qa_report.json
+
+  preprocess_and_augment:
+    cmd: python src/data/preprocess.py
+    deps:
+      - data/raw
+      - src/data/preprocess.py
+      - config/model_config.yaml
+    outs:
+      - data/processed
