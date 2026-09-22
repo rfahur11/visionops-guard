@@ -35,14 +35,25 @@ class SafetyPPEPredictor:
         if not model_path.exists():
             model_path = Path("models/visionops_guard.onnx")
 
+        if not model_path.exists():
+            print(f"[!] '{model_path}' not found on disk. Auto-generating ONNX model...")
+            model_path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                from ultralytics import YOLO
+                base_yolo = YOLO("yolov8n.pt")
+                exported = base_yolo.export(format="onnx", imgsz=self.img_size, simplify=True)
+                import shutil
+                shutil.copy(exported, str(model_path))
+                print(f"[+] Fallback ONNX model created at: {model_path}")
+            except Exception as e:
+                print(f"[!] Fallback creation error: {e}")
+
         print(f"[*] Loading ONNX Runtime Session: '{model_path}'")
-        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if ort.get_device() == 'GPU' else ['CPUExecutionProvider']
-        
         try:
-            self.session = ort.InferenceSession(str(model_path), providers=providers)
-        except Exception:
-            # Fallback to CPU execution provider
             self.session = ort.InferenceSession(str(model_path), providers=['CPUExecutionProvider'])
+        except Exception as e:
+            print(f"[!] Error loading ONNX session: {e}")
+            self.session = ort.InferenceSession(str(model_path))
 
         self.input_name = self.session.get_inputs()[0].name
         self.output_names = [o.name for o in self.session.get_outputs()]
