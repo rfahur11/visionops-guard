@@ -144,12 +144,22 @@ def main():
 
         # Status Banner
         compliance_status = result.get("compliance_status", "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED")
+        assessment_text = result.get("assessment", "")
+        if not assessment_text:
+            if result["is_compliant"]:
+                assessment_text = "Safety Standards Met" if is_en else "Standar K3 Terpenuhi"
+            elif "NO" in compliance_status or "TIDAK" in compliance_status:
+                assessment_text = "No worker or PPE detected." if is_en else "Tidak ada pekerja atau APD terdeteksi."
+            else:
+                v_count = result.get("violations_count", 0)
+                assessment_text = f"{v_count} Non-Compliance Alert(s)" if is_en else f"{v_count} Peringatan Pelanggaran K3"
+
         if result["is_compliant"]:
-            st.markdown(f'<div class="compliant-banner">✅ {compliance_status} — {result.get("assessment", "Safety Standards Met" if is_en else "Standar K3 Terpenuhi")}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="compliant-banner">✅ {compliance_status} — {assessment_text}</div>', unsafe_allow_html=True)
         elif "NO" in compliance_status or "TIDAK" in compliance_status:
-            st.info(f"ℹ️ {compliance_status}: {result.get('assessment', 'No worker or PPE detected.' if is_en else 'Tidak ada pekerja atau APD terdeteksi.')}")
+            st.info(f"ℹ️ {compliance_status}: {assessment_text}")
         else:
-            st.markdown(f'<div class="violation-banner">⚠️ {compliance_status} — {result.get("assessment", f"{result[\"violations_count\"]} Non-Compliance Alert(s)")}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="violation-banner">⚠️ {compliance_status} — {assessment_text}</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
