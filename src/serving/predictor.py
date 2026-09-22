@@ -195,14 +195,48 @@ class SafetyPPEPredictor:
         _, buffer = cv2.imencode(".jpg", annotated_img)
         base64_preview = base64.b64encode(buffer).decode("utf-8")
 
-        # Compliance Check Summary
-        violations = [d for d in detections if d["class_name"] in ["no_hardhat", "no_vest"]]
-        is_compliant = len(violations) == 0
+        # Smart Industrial PPE Compliance Assessment Logic
+        persons = [d for d in detections if d["class_name"] == "person"]
+        hardhats = [d for d in detections if d["class_name"] == "hardhat"]
+        vests = [d for d in detections if d["class_name"] == "vest"]
+        no_hardhats = [d for d in detections if d["class_name"] == "no_hardhat"]
+        no_vests = [d for d in detections if d["class_name"] == "no_vest"]
+
+        violation_details = []
+        if len(detections) == 0:
+            compliance_status = "NO PERSON / PPE DETECTED"
+            is_compliant = False
+            violations_count = 0
+            assessment = "Tidak ada pekerja atau atribut APD yang terdeteksi dalam frame. Silakan turunkan threshold atau arahkan kamera ke pekerja."
+        elif len(persons) == 0 and (len(hardhats) > 0 or len(vests) > 0):
+            compliance_status = "PARTIAL PPE DETECTED"
+            is_compliant = True
+            violations_count = 0
+            assessment = "Atribut APD (helm / rompi) terdeteksi di area kerja."
+        else:
+            # When person is detected:
+            if len(no_hardhats) > 0 or len(hardhats) == 0:
+                violation_details.append("Pekerja Tidak Memakai Helm Proyek (Missing Hardhat)")
+            if len(no_vests) > 0 or len(vests) == 0:
+                violation_details.append("Pekerja Tidak Memakai Rompi Safety (Missing Safety Vest)")
+
+            violations_count = len(violation_details)
+            if violations_count > 0:
+                compliance_status = "VIOLATION DETECTED"
+                is_compliant = False
+                assessment = f"Peringatan K3: Terdeteksi {len(persons)} pekerja tanpa APD lengkap: {'; '.join(violation_details)}."
+            else:
+                compliance_status = "COMPLIANT"
+                is_compliant = True
+                assessment = f"Standar K3 Terpenuhi: {len(persons)} pekerja terdeteksi mengenakan APD lengkap (Helm & Rompi)."
 
         return {
             "status": "success",
+            "compliance_status": compliance_status,
             "is_compliant": is_compliant,
-            "violations_count": len(violations),
+            "violations_count": violations_count,
+            "violation_details": violation_details,
+            "assessment": assessment,
             "detections": detections,
             "latency_ms": latency_ms,
             "annotated_image_base64": base64_preview

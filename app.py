@@ -75,10 +75,20 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
     ann_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     ann_rgb = cv2.cvtColor(ann_bgr, cv2.COLOR_BGR2RGB)
 
-    # Format summary dictionary
+    # Format summary dictionary with clean Unicode & K3 details
+    status_text = result.get("compliance_status", "COMPLIANT" if result["is_compliant"] else "VIOLATION DETECTED")
+    if result["is_compliant"]:
+        status_display = f"{status_text} ✅"
+    elif status_text.startswith("NO"):
+        status_display = f"{status_text} ℹ️"
+    else:
+        status_display = f"{status_text} ⚠️"
+
     summary = {
-        "status": "COMPLIANT ✅" if result["is_compliant"] else "VIOLATION DETECTED ⚠️",
+        "status": status_display,
+        "k3_assessment": result.get("assessment", ""),
         "violations_count": result["violations_count"],
+        "violation_details": result.get("violation_details", []),
         "inference_latency_ms": round(result["latency_ms"], 2),
         "detections_count": len(result["detections"]),
         "detected_objects": [
@@ -91,7 +101,7 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
         ]
     }
 
-    formatted_json_str = json.dumps(summary, indent=2)
+    formatted_json_str = json.dumps(summary, indent=2, ensure_ascii=False)
     return ann_rgb, formatted_json_str
 
 
@@ -99,13 +109,13 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.45):
 with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) as demo:
     gr.Markdown("# 🛡️ VisionOps Guard — Real-Time Safety PPE Inspection")
     gr.Markdown(
-        "Upload a construction or industrial factory workplace image to inspect hardhat and safety vest compliance in real-time using ONNX Runtime."
+        "Upload a construction or industrial factory workplace image, or use your webcam to inspect hardhat and safety vest compliance in real-time using ONNX Runtime."
     )
 
     with gr.Row():
         with gr.Column():
             input_img = gr.Image(type="numpy", label="Upload Image / Webcam Capture")
-            conf_slider = gr.Slider(minimum=0.1, maximum=1.0, value=0.45, step=0.05, label="Confidence Threshold")
+            conf_slider = gr.Slider(minimum=0.05, maximum=1.0, value=0.20, step=0.05, label="Confidence Threshold (Rekomendasi: 0.15 - 0.25)")
             submit_btn = gr.Button("Inspect Safety Compliance 🚀", variant="primary")
         
         with gr.Column():
@@ -118,6 +128,22 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
         outputs=[output_img, output_details],
         api_name=False
     )
+
+    # Pre-loaded Construction & PPE Test Examples
+    sample_files = [
+        ["data/raw/images/test/ppe_test_0000.jpg", 0.20],
+        ["data/raw/images/test/ppe_test_0001.jpg", 0.20],
+        ["data/raw/images/test/ppe_test_0002.jpg", 0.20],
+        ["data/raw/images/test/ppe_test_0003.jpg", 0.20],
+        ["data/raw/images/test/ppe_test_0004.jpg", 0.20],
+    ]
+    existing_samples = [s for s in sample_files if Path(s[0]).exists()]
+    if existing_samples:
+        gr.Examples(
+            examples=existing_samples,
+            inputs=[input_img, conf_slider],
+            label="📁 Klik Contoh Gambar Proyek Lapangan (Pre-loaded Test Images)"
+        )
 
 
 if __name__ == "__main__":
