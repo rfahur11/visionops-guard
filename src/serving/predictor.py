@@ -175,9 +175,10 @@ class SafetyPPEPredictor:
 
         return annotated
 
-    def predict(self, img_bytes: bytes) -> dict:
+    def predict(self, img_bytes: bytes, lang: str = "id") -> dict:
         """
         Main inference entry point. Supports ONNX Runtime with PyTorch YOLO fallback.
+        Supports bilingual output ('id' for Indonesian, 'en' for English).
         """
         start_t = time.time()
         orig_img, input_tensor, orig_w, orig_h = self.preprocess(img_bytes)
@@ -196,6 +197,7 @@ class SafetyPPEPredictor:
         base64_preview = base64.b64encode(buffer).decode("utf-8")
 
         # Smart Industrial PPE Compliance Assessment Logic
+        is_en = str(lang).lower().startswith("en")
         persons = [d for d in detections if d["class_name"] == "person"]
         hardhats = [d for d in detections if d["class_name"] == "hardhat"]
         vests = [d for d in detections if d["class_name"] == "vest"]
@@ -207,28 +209,48 @@ class SafetyPPEPredictor:
             compliance_status = "NO PERSON / PPE DETECTED"
             is_compliant = False
             violations_count = 0
-            assessment = "Tidak ada pekerja atau atribut APD yang terdeteksi dalam frame. Silakan turunkan threshold atau arahkan kamera ke pekerja."
+            assessment = (
+                "No worker or safety PPE detected in frame. Please adjust camera or lower confidence threshold."
+                if is_en else
+                "Tidak ada pekerja atau atribut APD yang terdeteksi dalam frame. Silakan turunkan threshold atau arahkan kamera ke pekerja."
+            )
         elif len(persons) == 0 and (len(hardhats) > 0 or len(vests) > 0):
             compliance_status = "PARTIAL PPE DETECTED"
             is_compliant = True
             violations_count = 0
-            assessment = "Atribut APD (helm / rompi) terdeteksi di area kerja."
+            assessment = (
+                "Safety PPE items (hardhat / vest) detected in workspace."
+                if is_en else
+                "Atribut APD (helm / rompi) terdeteksi di area kerja."
+            )
         else:
             # When person is detected:
             if len(no_hardhats) > 0 or len(hardhats) == 0:
-                violation_details.append("Pekerja Tidak Memakai Helm Proyek (Missing Hardhat)")
+                violation_details.append(
+                    "Worker Missing Safety Hardhat" if is_en else "Pekerja Tidak Memakai Helm Proyek (Missing Hardhat)"
+                )
             if len(no_vests) > 0 or len(vests) == 0:
-                violation_details.append("Pekerja Tidak Memakai Rompi Safety (Missing Safety Vest)")
+                violation_details.append(
+                    "Worker Missing High-Visibility Vest" if is_en else "Pekerja Tidak Memakai Rompi Safety (Missing Safety Vest)"
+                )
 
             violations_count = len(violation_details)
             if violations_count > 0:
                 compliance_status = "VIOLATION DETECTED"
                 is_compliant = False
-                assessment = f"Peringatan K3: Terdeteksi {len(persons)} pekerja tanpa APD lengkap: {'; '.join(violation_details)}."
+                assessment = (
+                    f"Safety Non-Compliance: Detected {len(persons)} worker(s) missing required PPE: {'; '.join(violation_details)}."
+                    if is_en else
+                    f"Peringatan K3: Terdeteksi {len(persons)} pekerja tanpa APD lengkap: {'; '.join(violation_details)}."
+                )
             else:
                 compliance_status = "COMPLIANT"
                 is_compliant = True
-                assessment = f"Standar K3 Terpenuhi: {len(persons)} pekerja terdeteksi mengenakan APD lengkap (Helm & Rompi)."
+                assessment = (
+                    f"Safety Standards Met: {len(persons)} worker(s) fully equipped with PPE (Hardhat & Vest)."
+                    if is_en else
+                    f"Standar K3 Terpenuhi: {len(persons)} pekerja terdeteksi mengenakan APD lengkap (Helm & Rompi)."
+                )
 
         return {
             "status": "success",

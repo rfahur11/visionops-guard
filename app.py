@@ -51,14 +51,17 @@ predictor = SafetyPPEPredictor()
 
 
 @gpu_decorator
-def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, progress=gr.Progress(track_tqdm=True)):
+def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, lang_choice: str = "Bahasa Indonesia (ID)", progress=gr.Progress(track_tqdm=True)):
     """
-    Gradio prediction function with real-time animated progress bar.
+    Gradio prediction function with bilingual support and real-time animated progress bar.
     """
+    is_en = "EN" in str(lang_choice)
     if input_image is None:
-        return None, "⚠️ Belum ada foto yang dipilih. Silakan upload gambar atau klik tombol kamera untuk menjepret foto."
+        msg = "⚠️ No image provided. Please upload an image or click the camera icon to snap a photo." if is_en else "⚠️ Belum ada foto yang dipilih. Silakan upload gambar atau klik tombol kamera untuk menjepret foto."
+        return None, msg
 
-    progress(0.15, desc="📸 Mempersiapkan frame gambar...")
+    prep_msg = "📸 Preparing and decoding image frame..." if is_en else "📸 Mempersiapkan frame gambar..."
+    progress(0.15, desc=prep_msg)
 
     # Convert RGB to BGR for OpenCV encoding
     img_bgr = cv2.cvtColor(input_image, cv2.COLOR_RGB2BGR)
@@ -68,11 +71,13 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, pr
     # Update confidence threshold
     predictor.conf_threshold = conf_threshold
 
-    progress(0.50, desc="⚡ Menjalankan inferensi ONNX Runtime...")
-    # Run Prediction
-    result = predictor.predict(img_bytes)
+    infer_msg = "⚡ Running ONNX Runtime inference acceleration..." if is_en else "⚡ Menjalankan inferensi ONNX Runtime..."
+    progress(0.50, desc=infer_msg)
+    # Run Prediction with selected language
+    result = predictor.predict(img_bytes, lang="en" if is_en else "id")
 
-    progress(0.85, desc="🛡️ Menganalisis kepatuhan standar K3 APD...")
+    eval_msg = "🛡️ Analyzing safety PPE compliance & bounding boxes..." if is_en else "🛡️ Menganalisis kepatuhan standar K3 APD..."
+    progress(0.85, desc=eval_msg)
     # Decode base64 preview image back to RGB
     img_data = base64.b64decode(result["annotated_image_base64"])
     nparr = np.frombuffer(img_data, np.uint8)
@@ -90,7 +95,7 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, pr
 
     summary = {
         "status": status_display,
-        "k3_assessment": result.get("assessment", ""),
+        ("safety_assessment" if is_en else "k3_assessment"): result.get("assessment", ""),
         "violations_count": result["violations_count"],
         "violation_details": result.get("violation_details", []),
         "inference_latency_ms": round(result["latency_ms"], 2),
@@ -105,7 +110,8 @@ def inspect_safety_ppe(input_image: np.ndarray, conf_threshold: float = 0.20, pr
         ]
     }
 
-    progress(1.0, desc="✅ Analisis Selesai!")
+    done_msg = "✅ Inspection Completed!" if is_en else "✅ Analisis Selesai!"
+    progress(1.0, desc=done_msg)
     formatted_json_str = json.dumps(summary, indent=2, ensure_ascii=False)
     return ann_rgb, formatted_json_str
 
@@ -115,35 +121,43 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
     gr.Markdown("# 🛡️ VisionOps Guard — Real-Time Safety PPE Inspection")
     gr.Markdown(
         "Sistem deteksi visual Alat Pelindung Diri (APD/PPE) dan K3 industri berbasis ONNX Runtime. "
-        "Pilih tab **Kamera Langsung** atau **Upload File Gambar** di bawah untuk memulai inspeksi."
+        "Supports Real-Time Industrial PPE Inspection & Multi-Language Display."
     )
+
+    with gr.Row():
+        lang_radio = gr.Radio(
+            choices=["Bahasa Indonesia (ID)", "English (EN)"],
+            value="Bahasa Indonesia (ID)",
+            label="🌐 Bahasa / Language",
+            interactive=True
+        )
 
     with gr.Row():
         with gr.Column(scale=1):
             with gr.Tabs():
-                with gr.TabItem("📸 Kamera Langsung (Webcam)"):
+                with gr.TabItem("📸 Kamera Langsung / Live Webcam"):
                     webcam_img = gr.Image(
                         sources=["webcam"],
                         type="numpy",
                         label="Live Webcam Stream"
                     )
-                    gr.Markdown("💡 *Posisikan diri Anda, klik icon kamera **[📷]** di tengah bawah video untuk snap foto, lalu klik tombol periksa di bawah:*")
-                    webcam_btn = gr.Button("⚡ Periksa Kepatuhan K3 dari Kamera", variant="primary")
+                    gr.Markdown("💡 *Posisikan diri Anda, klik icon kamera **[📷]** di tengah bawah video untuk snap foto, lalu klik tombol periksa:*")
+                    webcam_btn = gr.Button("⚡ Periksa Kepatuhan / Inspect Safety", variant="primary")
 
-                with gr.TabItem("📁 Upload File Gambar"):
+                with gr.TabItem("📁 Upload File Gambar / Upload Image"):
                     upload_img = gr.Image(
                         sources=["upload"],
                         type="numpy",
                         label="Pilih atau Drag-and-Drop Gambar Proyek"
                     )
-                    upload_btn = gr.Button("⚡ Periksa Kepatuhan K3 dari File", variant="primary")
+                    upload_btn = gr.Button("⚡ Periksa Kepatuhan / Inspect Safety", variant="primary")
 
             conf_slider = gr.Slider(
                 minimum=0.05,
                 maximum=1.0,
                 value=0.20,
                 step=0.05,
-                label="Confidence Threshold (Rekomendasi: 0.15 - 0.25)"
+                label="Confidence Threshold (Rekomendasi / Recommended: 0.15 - 0.25)"
             )
         
         with gr.Column(scale=1):
@@ -153,13 +167,13 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
     # Event Handlers for Webcam
     webcam_btn.click(
         fn=inspect_safety_ppe,
-        inputs=[webcam_img, conf_slider],
+        inputs=[webcam_img, conf_slider, lang_radio],
         outputs=[output_img, output_details],
         api_name=False
     )
     webcam_img.change(
         fn=inspect_safety_ppe,
-        inputs=[webcam_img, conf_slider],
+        inputs=[webcam_img, conf_slider, lang_radio],
         outputs=[output_img, output_details],
         api_name=False
     )
@@ -167,13 +181,13 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
     # Event Handlers for File Upload
     upload_btn.click(
         fn=inspect_safety_ppe,
-        inputs=[upload_img, conf_slider],
+        inputs=[upload_img, conf_slider, lang_radio],
         outputs=[output_img, output_details],
         api_name=False
     )
     upload_img.change(
         fn=inspect_safety_ppe,
-        inputs=[upload_img, conf_slider],
+        inputs=[upload_img, conf_slider, lang_radio],
         outputs=[output_img, output_details],
         api_name=False
     )

@@ -39,63 +39,100 @@ def load_predictor():
 
 
 def main():
+    # Sidebar Language Selector
+    st.sidebar.header("🌐 Language / Bahasa")
+    selected_lang = st.sidebar.selectbox("Pilih Bahasa / Select Language:", ["Bahasa Indonesia (ID)", "English (EN)"])
+    is_en = "EN" in selected_lang
+
     st.markdown('<div class="main-header">🛡️ VisionOps Guard</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Real-Time Industrial Safety PPE Inspection & CVOps Pipeline</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="sub-header">{"Real-Time Industrial Safety PPE Inspection & CVOps Pipeline" if is_en else "Sistem CVOps & Inspeksi Kepatuhan K3 APD Industri Real-Time"}</div>',
+        unsafe_allow_html=True
+    )
 
     predictor = load_predictor()
 
     # Sidebar Controls
-    st.sidebar.header("⚙️ Model & Inference Controls")
-    conf_thresh = st.sidebar.slider("Confidence Threshold", 0.05, 1.0, 0.20, 0.05, help="Rekomendasi: 0.15 - 0.25")
+    st.sidebar.header("⚙️ " + ("Model & Inference Controls" if is_en else "Kontrol Model & Inferensi"))
+    conf_thresh = st.sidebar.slider(
+        "Confidence Threshold" if is_en else "Ambang Batas Kepercayaan (Confidence)",
+        0.05, 1.0, 0.20, 0.05,
+        help="Recommended: 0.15 - 0.25" if is_en else "Rekomendasi: 0.15 - 0.25"
+    )
     iou_thresh = st.sidebar.slider("NMS IoU Threshold", 0.1, 1.0, 0.45, 0.05)
     predictor.conf_threshold = conf_thresh
     predictor.iou_threshold = iou_thresh
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 📊 MLOps Stack Status")
+    st.sidebar.markdown("### 📊 " + ("MLOps Stack Status" if is_en else "Status Komponen MLOps"))
     st.sidebar.success("ONNX Runtime Engine: **ACTIVE**")
     st.sidebar.info("Model Device: **CUDA GPU / CPU**")
 
     # Input Method Selection
-    input_mode = st.radio("Select Visual Input Source:", ["Upload Image File", "Live Camera (Webcam)", "Use Sample Dataset Image"], horizontal=True)
+    input_modes = (
+        ["Upload Image File", "Live Camera (Webcam)", "Use Sample Dataset Image"]
+        if is_en else
+        ["Upload File Gambar", "Kamera Langsung (Webcam)", "Gunakan Contoh Gambar Proyek"]
+    )
+    input_mode = st.radio(
+        "Select Visual Input Source:" if is_en else "Pilih Sumber Gambar Input:",
+        input_modes,
+        horizontal=True
+    )
 
     image_bytes = None
 
-    if input_mode == "Upload Image File":
-        uploaded_file = st.file_uploader("Upload Inspection Image (JPG / PNG):", type=["jpg", "jpeg", "png"])
+    if input_mode in ["Upload Image File", "Upload File Gambar"]:
+        uploaded_file = st.file_uploader(
+            "Upload Inspection Image (JPG / PNG):" if is_en else "Unggah Gambar Inspeksi (JPG / PNG):",
+            type=["jpg", "jpeg", "png"]
+        )
         if uploaded_file is not None:
             image_bytes = uploaded_file.read()
-    elif input_mode == "Live Camera (Webcam)":
-        camera_file = st.camera_input("Ambil Foto dari Kamera Langsung:")
+    elif input_mode in ["Live Camera (Webcam)", "Kamera Langsung (Webcam)"]:
+        camera_file = st.camera_input("Take Live Photo / Ambil Foto Langsung:")
         if camera_file is not None:
             image_bytes = camera_file.read()
     else:
         sample_dir = Path("data/raw/images/test")
         sample_files = list(sample_dir.glob("*.jpg")) if sample_dir.exists() else []
         if sample_files:
-            selected_sample = st.selectbox("Choose Sample Image:", sample_files, format_func=lambda x: x.name)
+            selected_sample = st.selectbox(
+                "Choose Sample Image:" if is_en else "Pilih Contoh Gambar:",
+                sample_files,
+                format_func=lambda x: x.name
+            )
             if selected_sample:
                 with open(selected_sample, "rb") as f:
                     image_bytes = f.read()
         else:
-            st.warning("No sample images found in data/raw/images/test. Please upload an image.")
+            st.warning(
+                "No sample images found in data/raw/images/test. Please upload an image."
+                if is_en else
+                "Tidak ada gambar sampel ditemukan di data/raw/images/test. Silakan unggah gambar."
+            )
 
     if image_bytes is not None:
         col1, col2 = st.columns(2)
 
         # Run ONNX Prediction with spinner feedback
-        with st.spinner("⚡ Menjalankan inferensi ONNX Runtime & evaluasi standar K3..."):
-            result = predictor.predict(image_bytes)
+        spinner_msg = (
+            "⚡ Running ONNX Runtime inference & safety assessment..."
+            if is_en else
+            "⚡ Menjalankan inferensi ONNX Runtime & evaluasi standar K3..."
+        )
+        with st.spinner(spinner_msg):
+            result = predictor.predict(image_bytes, lang="en" if is_en else "id")
 
         with col1:
-            st.markdown("### 📷 Original Input Image")
+            st.markdown("### 📷 " + ("Original Input Image" if is_en else "Gambar Input Asli"))
             nparr = np.frombuffer(image_bytes, np.uint8)
             orig_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             orig_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
             st.image(orig_rgb, use_container_width=True)
 
         with col2:
-            st.markdown("### 🎯 ONNX Real-Time Detection")
+            st.markdown("### 🎯 " + ("ONNX Real-Time Detection" if is_en else "Hasil Deteksi Real-Time ONNX"))
             img_b64 = result["annotated_image_base64"]
             img_data = base64.b64decode(img_b64)
             nparr_ann = np.frombuffer(img_data, np.uint8)
@@ -118,24 +155,24 @@ def main():
 
         # Metrics Panel
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Inference Latency", f"{result['latency_ms']} ms", delta="-42% vs PyTorch")
-        m2.metric("Total Detections", len(result["detections"]))
-        m3.metric("Violations Count", result["violations_count"])
-        m4.metric("Compliance Status", "COMPLIANT" if result["is_compliant"] else "VIOLATION")
+        m1.metric("Inference Latency" if is_en else "Latensi Inferensi", f"{result['latency_ms']} ms", delta="-42% vs PyTorch")
+        m2.metric("Total Detections" if is_en else "Total Deteksi", len(result["detections"]))
+        m3.metric("Violations Count" if is_en else "Jumlah Pelanggaran", result["violations_count"])
+        m4.metric("Compliance Status" if is_en else "Status Kepatuhan", "COMPLIANT" if result["is_compliant"] else "VIOLATION")
 
         # Detailed Detections Table
-        st.markdown("### 📋 Detected Objects Breakdown")
+        st.markdown("### 📋 " + ("Detected Objects Breakdown" if is_en else "Rincian Objek Terdeteksi"))
         if result["detections"]:
             det_data = []
             for d in result["detections"]:
                 det_data.append({
-                    "Class": d["class_name"].upper(),
-                    "Confidence": f"{d['confidence'] * 100:.1f}%",
+                    "Class / Kelas": d["class_name"].upper(),
+                    "Confidence / Keyakinan": f"{d['confidence'] * 100:.1f}%",
                     "Bounding Box (XYWH)": str(d["box_xywh"])
                 })
             st.dataframe(det_data, use_container_width=True)
         else:
-            st.info("No objects detected above confidence threshold.")
+            st.info("No objects detected above confidence threshold." if is_en else "Tidak ada objek yang terdeteksi di atas ambang batas kepercayaan.")
 
 
 if __name__ == "__main__":
