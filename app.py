@@ -121,4 +121,4 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
 
 
 if __name__ == "__main__":
-    demo.launch(show_api=False)
+    demo.launch(ssr=False, show_api=False)
