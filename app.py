@@ -10,6 +10,32 @@ from pathlib import Path
 import cv2
 import numpy as np
 import gradio as gr
+
+# Monkeypatch upstream Gradio / gradio_client bug with boolean JSON schemas
+try:
+    import gradio_client.utils as client_utils
+
+    _orig_get_type = getattr(client_utils, "get_type", None)
+    if _orig_get_type:
+        def _safe_get_type(schema):
+            if not isinstance(schema, (dict, list)):
+                return "Any"
+            return _orig_get_type(schema)
+        client_utils.get_type = _safe_get_type
+
+    _orig_json_schema = getattr(client_utils, "_json_schema_to_python_type", None)
+    if _orig_json_schema:
+        def _safe_json_schema(schema, defs=None):
+            if not isinstance(schema, dict):
+                return "Any"
+            if isinstance(schema.get("additionalProperties"), bool):
+                schema = dict(schema)
+                schema["additionalProperties"] = {}
+            return _orig_json_schema(schema, defs)
+        client_utils._json_schema_to_python_type = _safe_json_schema
+except Exception as e:
+    print(f"Warning: could not patch gradio_client: {e}")
+
 from src.serving.predictor import SafetyPPEPredictor
 
 # Optional ZeroGPU support if Space has GPU assigned
@@ -90,9 +116,9 @@ with gr.Blocks(title="VisionOps Guard - Safety PPE AI", theme=gr.themes.Soft()) 
         fn=inspect_safety_ppe,
         inputs=[input_img, conf_slider],
         outputs=[output_img, output_details],
-        api_name="predict"
+        api_name=False
     )
 
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    demo.launch(show_api=False)
