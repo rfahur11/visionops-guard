@@ -9,7 +9,6 @@ from pathlib import Path
 import cv2
 import numpy as np
 import yaml
-from ultralytics import YOLO
 
 try:
     import onnxruntime as ort
@@ -59,11 +58,15 @@ class SafetyPPEPredictor:
         # Fallback to PyTorch YOLO model if ONNX is not available
         if self.session is None:
             print("[*] Falling back to native PyTorch YOLO Engine...")
-            pt_path = Path("models/best_model.pt")
-            if not pt_path.exists():
-                pt_path = Path("yolov8n.pt")
-            self.pt_model = YOLO(str(pt_path))
-            print(f"[+] PyTorch YOLO model loaded from: {pt_path}")
+            try:
+                from ultralytics import YOLO
+                pt_path = Path("models/best_model.pt")
+                if not pt_path.exists():
+                    pt_path = Path("yolov8n.pt")
+                self.pt_model = YOLO(str(pt_path))
+                print(f"[+] PyTorch YOLO model loaded from: {pt_path}")
+            except ImportError as e:
+                print(f"[!] Neither ONNX Runtime nor ultralytics is available: {e}")
 
     def preprocess(self, img_bytes: bytes):
         """
