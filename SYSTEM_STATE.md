@@ -88,4 +88,5 @@ docker compose up -d
 - [x] Implementasi Prometheus & Grafana Dashboard-as-Code
 - [x] Integrasi Grafana & MLflow MCP Server untuk AI Agent
 - [x] Implementasi Automated CI/CD Workflow (GitHub Actions ke HF Spaces)
+- [x] Paket Showcase & Portofolio Eksekutif (README.md standar dunia, carousel.html 1080x1350, SHOWCASE_PACK.md)
 - [x] Sinkronisasi dokumentasi sistem (`SYSTEM_STATE.md` & `walkthrough.md`)
