@@ -35,8 +35,10 @@ jobs:
           python src/data/data_validation.py
 
       - name: Run Pytest Test Suite
+        env:
+          PYTHONPATH: .
         run: |
-          pytest tests/ -v
+          python -m pytest tests/ -v
 
   deploy-to-huggingface:
     name: 🤗 Auto Deploy to Hugging Face Spaces
