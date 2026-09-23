@@ -62,7 +62,7 @@ async def predict_safety_ppe(file: UploadFile = File(...)):
     Accepts an uploaded image file (JPG/PNG) and returns Safety PPE compliance status,
     detected bounding boxes, and base64 annotated preview image.
     """
-    if not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Uploaded file must be a valid image (JPG/PNG).")
 
     try:

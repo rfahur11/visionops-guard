@@ -66,17 +66,32 @@ def train_model(config_path: str = "config/model_config.yaml"):
     batch_size = config["model"]["batch_size"]
     img_size = config["data"]["img_size"]
     arch = config["model"]["architecture"]
+    lr = config["model"].get("learning_rate", 0.005)
+    optimizer_name = config["model"].get("optimizer", "AdamW")
+    weight_decay = config["model"].get("weight_decay", 0.0005)
 
-    # 3. Setup MLflow Tracking if available
+    # 3. Setup MLflow Tracking (Docker server or local fallback)
     if MLFLOW_AVAILABLE:
         try:
+            import urllib.request
+            try:
+                urllib.request.urlopen("http://localhost:5000", timeout=2)
+                mlflow.set_tracking_uri("http://localhost:5000")
+                print("[*] Connected to MLflow Tracking Server at http://localhost:5000")
+            except Exception:
+                mlflow.set_tracking_uri("file:./mlruns")
+                print("[*] Using local file tracking URI: ./mlruns")
+
             mlflow.set_experiment(config["project"]["name"])
-            mlflow.start_run(run_name=f"YOLO_PPE_Training_{arch}")
+            mlflow.start_run(run_name=f"YOLO26_PPE_Training_{arch}")
             mlflow.log_params({
                 "architecture": arch,
                 "epochs": epochs,
                 "batch_size": batch_size,
                 "img_size": img_size,
+                "learning_rate": lr,
+                "optimizer": optimizer_name,
+                "weight_decay": weight_decay,
                 "device": device
             })
             print("[+] MLflow tracking session initialized.")
@@ -96,6 +111,9 @@ def train_model(config_path: str = "config/model_config.yaml"):
         epochs=epochs,
         batch=batch_size,
         imgsz=img_size,
+        lr0=lr,
+        optimizer=optimizer_name,
+        weight_decay=weight_decay,
         device=0 if torch.cuda.is_available() else "cpu",
         project=str(project_dir),
         name="visionops_ppe",
@@ -119,6 +137,49 @@ def train_model(config_path: str = "config/model_config.yaml"):
                 mlflow.log_artifact(str(target_pt), artifact_path="models")
             except Exception:
                 pass
+
+        # 7. Auto-Export to ONNX FP16
+        print("[*] Exporting champion model to ONNX FP16...")
+        try:
+            onnx_path = models_dir / "visionops_guard.onnx"
+            best_model = YOLO(str(target_pt))
+            exported_file = best_model.export(
+                format="onnx",
+                imgsz=img_size,
+                half=True,
+                dynamic=False,
+                simplify=True
+            )
+            if Path(exported_file).exists() and Path(exported_file) != onnx_path:
+                shutil.copy(str(exported_file), str(onnx_path))
+            print(f"[+] Exported ONNX FP16 saved to: {onnx_path}")
+            if MLFLOW_AVAILABLE:
+                try:
+                    mlflow.log_artifact(str(onnx_path), artifact_path="models")
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[!] Warning exporting ONNX: {e}")
+
+    # 8. Log Final Evaluation Metrics to MLflow
+    if results and hasattr(results, "results_dict"):
+        rd = results.results_dict
+        print("\n" + "=" * 60)
+        print("📊 Training Results Summary:")
+        print(f"   mAP50(B)    : {rd.get('metrics/mAP50(B)', 0):.4f}")
+        print(f"   mAP50-95(B) : {rd.get('metrics/mAP50-95(B)', 0):.4f}")
+        print(f"   Precision(B): {rd.get('metrics/precision(B)', 0):.4f}")
+        print(f"   Recall(B)   : {rd.get('metrics/recall(B)', 0):.4f}")
+        print("=" * 60)
+        if MLFLOW_AVAILABLE:
+            try:
+                import re
+                for k, v in rd.items():
+                    if isinstance(v, (int, float)):
+                        clean_key = re.sub(r"[^a-zA-Z0-9_\-\. :]", "_", k.replace("/", "_"))
+                        mlflow.log_metric(clean_key, float(v))
+            except Exception as e:
+                print(f"[!] Error logging metrics to MLflow: {e}")
 
     if MLFLOW_AVAILABLE:
         try:

@@ -32,7 +32,7 @@ models/*.pt
 models/*.onnx
 !models/visionops_guard.onnx
 !models/.gitkeep
-yolov8n.pt
+*.pt
 runs/
 scratch/
 weights/

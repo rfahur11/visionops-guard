@@ -41,10 +41,12 @@ augmentation:
   shift_scale_rotate_p: 0.3
 
 model:
-  architecture: "yolov8n"  # Lightweight nano backbone for high FPS / low latency
+  architecture: "yolo26n"  # SOTA Ultralytics YOLO26 (Native End-to-End, High FPS)
   epochs: 15
   batch_size: 16
-  learning_rate: 0.01
+  learning_rate: 0.005
+  optimizer: "AdamW"
+  weight_decay: 0.0005
   onnx_export_path: "models/visionops_guard.onnx"
   quantization: "FP16"
 
