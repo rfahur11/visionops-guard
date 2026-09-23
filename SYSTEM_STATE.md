@@ -22,6 +22,7 @@ VisionOps Guard adalah sistem MLOps end-to-end berbasis Computer Vision untuk de
 | **FastAPI REST Service** | 🟢 Active | Microservice di port **8000** (`src/serving/main:app`) dengan endpoint `/predict`, `/health`, dan `/metrics`. |
 | **Docker Compose Stack** | 🟢 Active | Multi-container stack (`visionops-api`, `visionops-ui`, `visionops-prometheus`) dengan live volume mounts (`.:/app`) & `PYTHONPATH=/app`. |
 | **Prometheus Monitoring** | 🟢 Active | Observabilitas matriks di port **9090** (`config/prometheus.yml`). |
+| **Grafana Visual Dashboard** | 🟢 Active | Dashboard analitik visual eksekutif di port **3000** (`visionops-grafana`) dengan auto-provisioned Prometheus datasource. |
 
 ---
 

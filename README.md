@@ -62,6 +62,7 @@ docker compose up -d
 - 🎨 **Streamlit Web UI:** `http://localhost:8501`
 - ⚡ **FastAPI REST API & Docs:** `http://localhost:8000/docs`
 - 📊 **Prometheus Metrics:** `http://localhost:9090`
+- 📈 **Grafana Visual Dashboard:** `http://localhost:3000` *(Login: admin / admin)*
 
 ### 🐍 Opsi B: Menggunakan Virtual Environment (.venv)
 ```bash
