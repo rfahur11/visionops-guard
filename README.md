@@ -50,20 +50,28 @@ flowchart TD
 
 ## 🚀 Quick Start (Menjalankan Lokal)
 
+### 🐳 Opsi A: Menggunakan Docker Container (Rekomendasi Utama)
 ```bash
 # 1. Clone Repositori
 git clone https://github.com/rfahur11/visionops-guard.git
 cd visionops-guard
 
-# 2. Setup Virtual Environment & Install Dependencies
+# 2. Jalankan seluruh microservice stack via Docker Compose
+docker compose up -d
+```
+- 🎨 **Streamlit Web UI:** `http://localhost:8501`
+- ⚡ **FastAPI REST API & Docs:** `http://localhost:8000/docs`
+- 📊 **Prometheus Metrics:** `http://localhost:9090`
+
+### 🐍 Opsi B: Menggunakan Virtual Environment (.venv)
+```bash
+# 1. Setup Virtual Environment & Install Dependencies
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Jalankan Preprocessing Pipeline
-python src/data/download_dataset.py
-python src/data/data_validation.py
-python src/data/preprocess.py
+# 2. Jalankan Dashboard Streamlit
+python -m streamlit run ui/app.py
 ```
 
 ---
