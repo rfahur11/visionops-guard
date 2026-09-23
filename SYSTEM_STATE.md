@@ -24,6 +24,8 @@ VisionOps Guard adalah sistem MLOps end-to-end berbasis Computer Vision untuk de
 | **Prometheus Monitoring** | 🟢 Active | Observabilitas matriks time-series di port **9090** (`config/prometheus.yml`) mengambil data dari `visionops-api:8000`. |
 | **Grafana Visual Dashboard** | 🟢 Active | Dashboard analitik visual eksekutif di port **3000** (`visionops-grafana`) dengan auto-provisioned Prometheus datasource & pre-built dashboard (*Executive Command Center*). |
 | **Grafana MCP Server** | 🟢 Active | Model Context Protocol integration (`@grafana/mcp-server`) di `mcp_config.json` via Service Account Token. |
+| **MLflow Experiment Tracking**| 🟢 Active | UI pelacakan eksperimen & registry model di port **5000** (`visionops-mlflow`) membaca volume `./mlruns`. |
+| **MLflow Model Skill & MCP**  | 🟢 Active | Custom Skill (`.agents/skills/mlflow-model-management`) & MLflow MCP server di `mcp_config.json`. |
 
 ---
 

@@ -63,6 +63,7 @@ docker compose up -d
 - ⚡ **FastAPI REST API & Docs:** `http://localhost:8000/docs`
 - 📊 **Prometheus Metrics:** `http://localhost:9090`
 - 📈 **Grafana Visual Dashboard:** `http://localhost:3000` *(Login: admin / admin)*
+- 🧪 **MLflow Tracking UI:** `http://localhost:5000`
 
 ### 🐍 Opsi B: Menggunakan Virtual Environment (.venv)
 ```bash

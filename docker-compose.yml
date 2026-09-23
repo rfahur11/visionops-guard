@@ -59,3 +59,17 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: visionops-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_ALLOW_FILE_STORE=true
+    volumes:
+      - ./mlruns:/app/mlruns
+    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri /app/mlruns
+    restart: unless-stopped
