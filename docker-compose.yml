@@ -10,6 +10,8 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -23,8 +25,13 @@ services:
       dockerfile: Dockerfile
     container_name: visionops-ui
     command: streamlit run ui/app.py --server.port=8501 --server.address=0.0.0.0
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     ports:
       - "8501:8501"
+    volumes:
+      - .:/app
     depends_on:
       - visionops-api
     restart: unless-stopped
