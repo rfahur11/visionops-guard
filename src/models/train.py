@@ -17,6 +17,21 @@ try:
 except ImportError:
     MLFLOW_AVAILABLE = False
 
+# Safe matplotlib check for Windows App Control environments
+MATPLOTLIB_OK = True
+try:
+    import matplotlib.font_manager
+except Exception:
+    MATPLOTLIB_OK = False
+    try:
+        import ultralytics.utils.checks
+        import ultralytics.data.utils
+        ultralytics.utils.checks.check_font = lambda *args, **kwargs: None
+        ultralytics.data.utils.check_font = lambda *args, **kwargs: None
+    except Exception:
+        pass
+
+
 
 def train_model(config_path: str = "config/model_config.yaml"):
     """
@@ -26,8 +41,15 @@ def train_model(config_path: str = "config/model_config.yaml"):
     print("🚀 Starting VisionOps Guard Model Training Pipeline")
     print("=" * 60)
 
-    # 1. Load Configurations
-    with open(config_path, "r") as f:
+    # 1. Resolve Root Working Directory
+    cfg_file = Path(config_path)
+    if not cfg_file.exists():
+        # Fallback if executed from inside src/models
+        root_dir = Path(__file__).resolve().parents[2]
+        os.chdir(root_dir)
+        cfg_file = Path(config_path).resolve()
+
+    with open(cfg_file, "r") as f:
         config = yaml.safe_load(f)
 
     # 2. Check GPU Acceleration
@@ -74,6 +96,7 @@ def train_model(config_path: str = "config/model_config.yaml"):
         project=str(project_dir),
         name="visionops_ppe",
         exist_ok=True,
+        plots=MATPLOTLIB_OK,
         verbose=True
     )
 
@@ -104,3 +127,4 @@ def train_model(config_path: str = "config/model_config.yaml"):
 
 if __name__ == "__main__":
     train_model()
+
