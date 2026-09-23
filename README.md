@@ -21,6 +21,11 @@ pinned: false
 
 > **Executive One-Liner:** An enterprise-grade, end-to-end Computer Vision & MLOps system that automates industrial Personal Protective Equipment (PPE / K3) compliance monitoring in real time with sub-15ms ONNX latency, MLflow experiment tracking, Prometheus/Grafana observability, and automated GitHub Actions CI/CD deployment.
 
+<div align="center">
+  <img src="docs/demo.gif" alt="VisionOps Guard Real-Time PPE Detection Demo" width="780px" style="border-radius: 14px; box-shadow: 0 12px 35px rgba(0, 242, 254, 0.15);" />
+  <p><em>🎥 Real-Time Industrial PPE Compliance Inspection & Multi-Class Safety Detection Powered by Ultralytics YOLO26 & ONNX FP16 Engine.</em></p>
+</div>
+
 ---
 
 ## 🎯 1. Executive Summary & Business Problem
