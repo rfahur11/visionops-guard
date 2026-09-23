@@ -185,7 +185,8 @@ def main():
                     "Confidence" if is_en else "Tingkat Keyakinan": f"{d['confidence'] * 100:.1f}%",
                     "Bounding Box (XYWH)": str(d["box_xywh"])
                 })
-            st.dataframe(det_data, use_container_width=True)
+            st.table(det_data)
+
         else:
             st.info("No objects detected above confidence threshold." if is_en else "Tidak ada objek yang terdeteksi di atas ambang batas kepercayaan.")
 
