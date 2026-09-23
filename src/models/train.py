@@ -14,13 +14,16 @@ from ultralytics import YOLO
 try:
     import mlflow
     MLFLOW_AVAILABLE = True
-except ImportError:
+except Exception:
     MLFLOW_AVAILABLE = False
 
-# Safe matplotlib check for Windows App Control environments
-MATPLOTLIB_OK = True
+
+# Enable headless Agg backend for matplotlib before importing font_manager
 try:
+    import matplotlib
+    matplotlib.use("Agg")
     import matplotlib.font_manager
+    MATPLOTLIB_OK = True
 except Exception:
     MATPLOTLIB_OK = False
     try:
@@ -30,6 +33,7 @@ except Exception:
         ultralytics.data.utils.check_font = lambda *args, **kwargs: None
     except Exception:
         pass
+
 
 
 
