@@ -6,7 +6,7 @@ Paket materi promosi dan distribusi media sosial (LinkedIn, Twitter/X, Video Sho
 
 ## 📌 1. Draf Postingan LinkedIn Carousel (Formula PAS + Story)
 
-> **Format Unggahan:** Unggah file PDF hasil export dari `docs/carousel.html` sebagai dokumen Carousel di LinkedIn, lalu sertakan caption di bawah ini:
+> **Format Unggahan:** Unggah file PDF hasil export dari `docs/carousel_en.html` (Versi Bahasa Inggris) atau `docs/carousel.html` (Versi Bahasa Indonesia) sebagai dokumen Carousel di LinkedIn, lalu sertakan caption di bawah ini:
 
 ```markdown
 # 🚀 Draf Caption LinkedIn (Bahasa Indonesia)
