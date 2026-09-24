@@ -9,6 +9,8 @@ Paket materi promosi dan distribusi media sosial (LinkedIn, Twitter/X, Video Sho
 > **Format Unggahan:** Unggah file PDF hasil export dari `docs/carousel.html` sebagai dokumen Carousel di LinkedIn, lalu sertakan caption di bawah ini:
 
 ```markdown
+# 🚀 Draf Caption LinkedIn (Bahasa Indonesia)
+
 Berapa biaya yang harus ditanggung industri manufaktur atau konstruksi akibat 1 detik kelalaian Alat Pelindung Diri (APD/K3)?
 
 Di lapangan, audit keselamatan kerja masih sering mengandalkan inspeksi visual manual yang bersifat sporadis. Hasilnya? Pelanggaran seperti pekerja tanpa helm (no_helmet) atau tanpa rompi safety (no_vest) baru disadari setelah terjadi insiden berbahaya atau audit berkala.
@@ -36,6 +38,40 @@ Bagaimana pendekatan tim rekan-rekan dalam mengatasi tantangan latensi dan peman
 
 🌐 Live Interactive Demo: https://rfahrur6045-mlops-final-copy.hf.space
 💻 GitHub Open Source: https://github.com/rfahur11/visionops-guard
+
+#ComputerVision #MLOps #YOLO26 #DeepLearning #ArtificialIntelligence #SoftwareEngineering #IndustrialSafety #DevOps #OpenSource
+```
+
+```markdown
+# 🌍 Draf Caption LinkedIn (English — RECOMMENDED for Global Reach & Recruiters)
+
+How much does a 1-second Personal Protective Equipment (PPE) compliance failure cost in high-risk industrial environments?
+
+In the field, safety audits still heavily rely on sporadic manual visual inspections. The result? Critical violations like unhelmeted workers or missing safety vests are only discovered after dangerous incidents or routine spot-checks.
+
+On the technical side, deploying conventional Computer Vision models (unquantized PyTorch) across dozens of edge CCTV feeds hits massive latency bottlenecks (>80ms/frame) and skyrocketing GPU cloud server costs.
+
+To solve this, I designed and built:
+🛡️ VisionOps Guard — Real-Time Industrial Safety PPE & CVOps Platform.
+
+This platform transforms manual oversight into an automated, high-velocity safety infrastructure:
+⚡ SOTA Upgrade: Powered by Ultralytics YOLO26 (120 layers, 2.37M params) with AdamW optimizer tuning.
+🚀 Sub-15ms Latency: Achieved 1.3 ms/image (GPU) & 12.5 ms (CPU) inference via ONNX Runtime FP16 quantization (compressed to 4.96 MB).
+🧪 Full Observability Stack: Prometheus & Grafana Dashboard-as-Code tracking real-time PPE compliance rates and P99 latency.
+🔄 Automated CI/CD Pipeline: GitHub Actions workflow running data QA, Pytest unit tests (6/6 passing 100%), and auto-deploying via Git LFS to Hugging Face Spaces.
+
+The PDF document carousel attached breaks down the technical case study:
+📌 Slide 1-2: Why manual safety audits fail & technical trade-offs
+📌 Slide 3: 5-Tier production architecture blueprint (Ingestion ➔ MLflow ➔ Serving ➔ Observability ➔ CI/CD)
+📌 Slide 4: Real-time detection UI & multi-class PPE compliance
+📌 Slide 5: Code deep-dive on ONNX lazy loading & Prometheus instrumentation
+📌 Slide 6: Audited performance benchmarks (91.5% Precision, 72.6% mAP50 across 1,112 evaluated objects)
+📌 Slide 7: Live demo link & open-source repository
+
+How does your team handle real-time edge vision latency and industrial safety monitoring? Let’s connect and discuss in the comments! 👇
+
+🌐 Live Interactive Demo: https://rfahrur6045-mlops-final-copy.hf.space
+💻 Open-Source GitHub Repo: https://github.com/rfahur11/visionops-guard
 
 #ComputerVision #MLOps #YOLO26 #DeepLearning #ArtificialIntelligence #SoftwareEngineering #IndustrialSafety #DevOps #OpenSource
 ```
